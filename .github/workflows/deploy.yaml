@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - staging
 
 jobs:
   deploy:
@@ -17,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "20"
+          node-version: "22"
 
       # Install dependencies
       - name: Install Dependencies
@@ -27,24 +26,10 @@ jobs:
       - name: Build the project
         run: npm run build
 
-      # Determine the branch and set variables accordingly
-      - name: Set deployment variables
-        id: vars
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "BUILD_FILE=build.zip" >> $GITHUB_ENV
-            echo "EB_APPLICATION_NAME=${{ secrets.EB_APPLICATION_NAME }}" >> $GITHUB_ENV
-            echo "EB_ENVIRONMENT_NAME=${{ secrets.EB_ENVIRONMENT_NAME }}" >> $GITHUB_ENV
-          elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
-            echo "BUILD_FILE=staging_build.zip" >> $GITHUB_ENV
-            echo "EB_APPLICATION_NAME=${{ secrets.EB_STAGING_APPLICATION_NAME }}" >> $GITHUB_ENV
-            echo "EB_ENVIRONMENT_NAME=${{ secrets.EB_STAGING_ENVIRONMENT_NAME }}" >> $GITHUB_ENV
-          fi
-
       # Zip the build output and package.json
       - name: Zip the build output
-        run: zip -r $BUILD_FILE dist package.json package-lock.json private_key.pem public_key.pem .ebextensions
-
+        run: zip -r build.zip dist package.json package-lock.json
+        
       - name: Configure AWS credentials
         run: |
           aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -53,13 +38,13 @@ jobs:
 
       # Upload to S3
       - name: Upload to S3
-        run: aws s3 cp $BUILD_FILE s3://${{ secrets.S3_BUCKET_NAME }}/
-
+        run: aws s3 cp build.zip s3://${{ secrets.S3_BUCKET_NAME }}/
+        
       # Deploy to Elastic Beanstalk
       - name: Deploy to AWS Elastic Beanstalk
         run: |
           aws elasticbeanstalk create-application-version \
-          --application-name $EB_APPLICATION_NAME \
-          --source-bundle S3Bucket="${{ secrets.S3_BUCKET_NAME }}",S3Key="$BUILD_FILE" \
+          --application-name ${{ secrets.EB_APPLICATION_NAME }} \
+          --source-bundle S3Bucket="${{ secrets.S3_BUCKET_NAME }}",S3Key="build.zip" \
           --version-label "v${{ github.run_number }}" 
-          aws elasticbeanstalk update-environment --environment-name $EB_ENVIRONMENT_NAME --version-label "v${{ github.run_number }}"
+          aws elasticbeanstalk update-environment --environment-name caradvertising-env --version-label "v${{ github.run_number }}"
