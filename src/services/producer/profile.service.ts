@@ -8,7 +8,7 @@ import {
   SetOperationHoursSchema,
   UpdateProfileSchema,
   UploadRestaurantImagesSchema,
-} from '../../validators/restaurant/profile.validation';
+} from '../../validators/producer/profile.validation';
 import {
   BookingRepository,
   CuisineTypeRepository,
@@ -31,7 +31,7 @@ import { hashPassword } from '../../utils/PasswordUtils';
 import s3Service from '../s3.service';
 import { BadRequestError } from '../../errors/badRequest.error';
 import { NotFoundError } from '../../errors/notFound.error';
-import { UploadDocuments } from '../../validators/restaurant/profile.validation';
+import { UploadDocuments } from '../../validators/producer/profile.validation';
 import { generateSlots } from '../../utils/generateHourlySlots';
 import RestaurantPaymentMethods from '../../models/RestaurantPaymentMethods';
 import { Between, In, MoreThan } from 'typeorm';

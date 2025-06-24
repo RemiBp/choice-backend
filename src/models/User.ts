@@ -36,22 +36,13 @@ export default class User {
   deviceId: string;
 
   @Column({ nullable: true })
-  firstName: string;
+  fullName: string;
 
   @Column({ nullable: true })
-  lastName: string;
-
-  @Column({ nullable: true })
-  profilePicture: string;
-
-  @Column({ nullable: true })
-  about: string;
+  userName: string;
 
   @Column()
   phoneNumber: string;
-
-  @Column({ nullable: true })
-  address: string;
 
   @Column({ default: false })
   isActive: boolean;
@@ -99,7 +90,7 @@ export default class User {
   @OneToMany(() => FavouriteRestaurant, favourite => favourite.restaurant, { cascade: true })
   favouriteRestaurant: FavouriteRestaurant[];
 
-  @OneToMany (() => RestaurantPaymentMethods, paymentMethods => paymentMethods.user, { cascade: true })
+  @OneToMany(() => RestaurantPaymentMethods, paymentMethods => paymentMethods.user, { cascade: true })
   paymentMethods: RestaurantPaymentMethods[];
 
   @CreateDateColumn({ type: 'timestamptz', default: () => 'NOW()' })

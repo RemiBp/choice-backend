@@ -1,15 +1,18 @@
 import { z } from 'zod';
 
 export const userSignUpSchema = z.object({
-  firstName: z.string({ required_error: 'firstname is required' }).trim(),
-  lastName: z.string({ required_error: 'lastName is required' }).trim(),
-  phoneNumber: z.string({ required_error: 'phone is required' }).trim(),
-  email: z
-    .string({ required_error: 'Email is required' })
-    .trim()
+  fullName: z.string({ required_error: 'fullName is required' }).trim(),
+  userName: z.string({ required_error: 'userName is required' }).trim()
+    .min(3, 'userName must be at least 3 characters long')
+    .max(30, 'userName must be less than 30 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'userName can only contain letters, numbers, and underscores'),
+  email: z.string({ required_error: 'Email is required' }).trim()
     .email({ message: 'Invalid email' })
     .transform(val => val.toLowerCase()),
-  password: z.string({ required_error: 'Password is required' }).trim(),
+  password: z.string({ required_error: 'Password is required' }).trim()
+    .min(1, 'Password is required'),
+  phoneNumber: z.string({ required_error: 'Phone number is required' }).trim()
+    .regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
 });
 
 export type UserSignUp = z.infer<typeof userSignUpSchema>;

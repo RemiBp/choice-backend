@@ -1,6 +1,6 @@
 import { profile } from 'console';
 import { z } from 'zod';
-import { deleteRestaurantImage } from '../../services/restaurant/profile.service';
+import { deleteRestaurantImage } from '../../services/producer/profile.service';
 
 export const uploadDocumentsSchema = z.object({
   userId: z.number({ required_error: 'userId is required' }),

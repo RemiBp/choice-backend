@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { BookingService } from '../../services/restaurant/booking.service';
+import { BookingService } from '../../services/producer/booking.service';
 
 export const getBookings = async (req: Request, res: Response, next: NextFunction) => {
   try {

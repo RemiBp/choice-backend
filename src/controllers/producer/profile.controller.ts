@@ -9,8 +9,8 @@ import {
   updateProfileSchema,
   uploadDocumentsSchema,
   uploadRestaurantImagesSchema,
-} from '../../validators/restaurant/profile.validation';
-import { ProfileService } from '../../services/restaurant/profile.service';
+} from '../../validators/producer/profile.validation';
+import { ProfileService } from '../../services/producer/profile.service';
 import { time } from 'console';
 
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {

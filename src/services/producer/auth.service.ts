@@ -19,7 +19,7 @@ import {
   ResetPassword,
   SignUp,
   VerifyOtpSchema,
-} from '../../validators/restaurant/auth.validation';
+} from '../../validators/producer/auth.validation';
 import { generateHashedPassword } from '../../utils/generateHashedPassword';
 import { comparePassword } from '../../utils/comparePassword';
 import { generateAccessToken, generateRefreshToken } from '../../utils/tokenUtils';

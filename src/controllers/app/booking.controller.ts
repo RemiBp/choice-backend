@@ -9,7 +9,7 @@ import {
   getCuisineTypesSchema,
 } from '../../validators/app/booking.validation';
 import { CuisineTypeRepository } from '../../repositories';
-import { getRestaurantImagesSchema } from '../../validators/restaurant/profile.validation';
+import { getRestaurantImagesSchema } from '../../validators/producer/profile.validation';
 
 export const findRestaurantsNearby = async (req: Request, res: Response, next: NextFunction) => {
   try {

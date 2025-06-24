@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { BookingController } from '../../controllers/restaurant/booking.controller';
+import { BookingController } from '../../controllers/producer/booking.controller';
 import { authenticateJWTForRestaurant, checkStatus } from '../../middlewares/restaurant.auth.middleware';
 
 const RestaurantBookingRouter = Router();

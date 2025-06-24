@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ProfileController } from '../../controllers/restaurant/profile.controller';
+import { ProfileController } from '../../controllers/producer/profile.controller';
 import { authenticateJWTForRestaurant, checkStatus } from '../../middlewares/restaurant.auth.middleware';
 
 const RestaurantProfileRouter = Router();

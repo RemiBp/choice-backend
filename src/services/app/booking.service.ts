@@ -27,7 +27,7 @@ import {
 } from '../../validators/app/booking.validation';
 import { getCurrentTimeInUTCFromTimeZone, getTodayDateInTimeZone } from '../../utils/getTime';
 import { sendAdminNotification } from '../../utils/sendAdminNotification';
-import { GetRestaurantImagesSchema } from '../../validators/restaurant/profile.validation';
+import { GetRestaurantImagesSchema } from '../../validators/producer/profile.validation';
 import Review from '../../models/Review';
 
 export const findRestaurantsNearby = async (findRestaurantsNearByObject: FindRestaurantsNearbySchema) => {

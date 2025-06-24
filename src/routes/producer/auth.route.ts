@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthController } from '../../controllers/restaurant/auth.controller';
+import { AuthController } from '../../controllers/producer/auth.controller';
 
 const RestaurantAuthRouter = Router();
 RestaurantAuthRouter.get('/', (req, res) => {

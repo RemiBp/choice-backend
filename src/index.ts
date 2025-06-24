@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import errHandlingMiddleware from './middlewares/error.middleware';
 import cors from 'cors';
 import AppRouter from './routes/app';
-import RestaurantRouter from './routes/restaurant';
+import RestaurantRouter from './routes/producer';
 import adminRouter from './routes/admin';
 
 const WEBAPP_URL = process.env.WEBAPP_URL;

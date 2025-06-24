@@ -1,12 +1,12 @@
 import { NextFunction, Request, Response } from 'express';
-import { AuthService } from '../../services/restaurant/auth.service';
+import { AuthService } from '../../services/producer/auth.service';
 import {
   signUpSchema,
   forgotPasswordSchema,
   loginSchema,
   resetPasswordSchema,
   verifyOtpSchema,
-} from '../../validators/restaurant/auth.validation';
+} from '../../validators/producer/auth.validation';
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
