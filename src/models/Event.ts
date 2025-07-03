@@ -24,10 +24,25 @@ export default class Event {
     date: string;
 
     @Column()
-    time: string;
+    startTime: string;
+
+    @Column()
+    endTime: string;
 
     @Column({ nullable: true })
     location: string;
+
+    @Column({ nullable: true })
+    experienceType: string;
+
+    @Column('decimal', { precision: 10, scale: 2, nullable: true })
+    pricePerGuest: number;
+
+    @Column({ nullable: true })
+    maxCapacity: number;
+
+    @Column('text', { array: true, nullable: true })
+    eventImages: string[];
 
     @ManyToOne(() => Producer, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'producerId' })

@@ -4,8 +4,11 @@ import {
   getRestaurantImagesSchema,
   presignedURLSchema,
   reviewsAndRatingsSchema,
+  setCapacitySchema,
+  setGalleryImagesSchema,
   setMainImageSchema,
   setOperationHoursSchema,
+  setServiceTypeSchema,
   updateProfileSchema,
   uploadDocumentsSchema,
   uploadRestaurantImagesSchema,
@@ -146,15 +149,84 @@ export const getMenu = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
+export const setServiceType = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    const { serviceType } = setServiceTypeSchema.parse(req.body);
+
+    const result = await ProfileService.setServiceType({
+      userId: Number(userId),
+      serviceType,
+    });
+
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const setGalleryImages = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const validated = setGalleryImagesSchema.parse(req.body);
+    await ProfileService.setGalleryImages(userId, validated);
+
+    res.status(200).json({ message: 'Gallery images saved successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getGalleryImages = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const images = await ProfileService.getGalleryImages(userId);
+    res.status(200).json({ images });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const setOperationalHours = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const restaurantId = Number(req.userId);
     const hours = req.body.hours;
-    const validatedObject = setOperationHoursSchema.parse({
-      restaurantId,
-      hours,
+    const validatedObject = setOperationHoursSchema.parse({ hours });
+    const userId = Number(req.userId);
+
+    const response = await ProfileService.setOperationalHours({
+      ...validatedObject,
+      userId,
     });
-    const response = await ProfileService.setOperationalHours(validatedObject);
+
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getOperationalDays = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    const response = await ProfileService.getOperationalDays(userId);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const setCapacity = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    const { totalCapacity } = setCapacitySchema.parse(req.body);
+
+    const response = await ProfileService.setCapacity({ userId, totalCapacity });
+
     res.status(200).json(response);
   } catch (error) {
     next(error);
@@ -185,9 +257,9 @@ export const getSlotDuration = async (req: Request, res: Response, next: NextFun
 export const getUnavailableSlots = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const restaurantId = Number(req.userId);
-    const timezone = req.query.timeZone? String(req.query.timeZone) : undefined;
-    const date = req.query.date? String(req.query.date) : undefined;
-    if(!timezone){
+    const timezone = req.query.timeZone ? String(req.query.timeZone) : undefined;
+    const date = req.query.date ? String(req.query.date) : undefined;
+    if (!timezone) {
       throw new Error('timeZone is required');
     }
     const page = Number(req.query.page) || 1;
@@ -204,10 +276,10 @@ export const addUnavailableSlot = async (req: Request, res: Response, next: Next
     const restaurantId = Number(req.userId);
     const slotIds = req.body.slotIds
     const date = req.body.date ? String(req.body.date) : undefined;
-    if(!date) {
+    if (!date) {
       throw new Error('Date is required');
     }
-    if(!slotIds){
+    if (!slotIds) {
       throw new Error('slotIds array is required');
     }
     const response = await ProfileService.addUnavailableSlot(restaurantId, slotIds, date);
@@ -420,7 +492,7 @@ export const bookingChart = async (req: Request, res: Response, next: NextFuncti
     if (!timeZone) {
       throw new Error('timeZone is required');
     }
-    if(!chartType){
+    if (!chartType) {
       throw new Error('chartType is required');
     }
     const response = await ProfileService.bookingChart(userId, chartType, timeZone);
@@ -438,7 +510,7 @@ export const customerChart = async (req: Request, res: Response, next: NextFunct
     if (!timeZone) {
       throw new Error('timeZone is required');
     }
-    if(!chartType){
+    if (!chartType) {
       throw new Error('chartType is required');
     }
     const response = await ProfileService.customerChart(userId, chartType, timeZone);

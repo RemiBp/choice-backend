@@ -6,7 +6,21 @@ import {
   loginSchema,
   resetPasswordSchema,
   verifyOtpSchema,
+  createProducerSchema,
+  getPresignedDocumentSchema,
+  submitDocumentsSchema,
 } from '../../validators/producer/auth.validation';
+import { presignedURLSchema } from '../../validators/producer/profile.validation';
+
+export const createProducer = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validatedInput = createProducerSchema.parse(req.body);
+    const result = await AuthService.createProducer(validatedInput);
+    res.status(201).json({ message: 'Producer created successfully', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -42,6 +56,44 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
     });
     const response = await AuthService.verifyOtp(validatedRequest);
     res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPreSignedUrl = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    const fileName = req.body.fileName;
+    const contentType = req.body.contentType;
+    const folderName = req.body.folderName;
+    if (!userId) {
+      throw new Error('userId is required');
+    }
+    const validatedObject = presignedURLSchema.parse({
+      fileName,
+      contentType,
+      folderName,
+    });
+    const response = await AuthService.getPreSignedUrl(userId, validatedObject);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const submitDocuments = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    if (!userId) {
+      throw new Error('userId is required');
+    }
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const validated = submitDocumentsSchema.parse(req.body);
+    await AuthService.submitDocument(userId, validated);
+
+    res.status(200).json({ message: 'Documents submitted successfully' });
   } catch (error) {
     next(error);
   }

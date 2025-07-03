@@ -1,6 +1,7 @@
 import { profile } from 'console';
 import { z } from 'zod';
 import { deleteRestaurantImage } from '../../services/producer/profile.service';
+import { ServiceType } from '../../enums/serviceType.enum';
 
 export const uploadDocumentsSchema = z.object({
   userId: z.number({ required_error: 'userId is required' }),
@@ -19,7 +20,7 @@ export const presignedURLSchema = z
     fileName: z.string({ required_error: 'fileName is required' }),
     contentType: z.string({ required_error: 'contentType is required' }),
     folderName: z.enum(
-      ['restaurantProfileImage', 'restaurantGalleryImage', 'certificateOfHospitality', 'certificateOfTourism', 'menu'],
+      ['GalleryImage', 'BusinessDocuments'],
       {
         required_error: 'folderName is required',
       }
@@ -28,9 +29,7 @@ export const presignedURLSchema = z
   .refine(
     data => {
       if (
-        data.folderName === 'certificateOfHospitality' ||
-        data.folderName === 'certificateOfTourism' ||
-        data.folderName === 'menu'
+        data.folderName === 'BusinessDocuments'
       ) {
         return data.contentType === 'application/pdf';
       }
@@ -45,14 +44,15 @@ export const presignedURLSchema = z
 export type PreSignedURL = z.infer<typeof presignedURLSchema>;
 
 export const updateProfileSchema = z.object({
-  restaurantName: z.string({ required_error: 'restaurantName is required' }).trim(),
-  restaurantDetails: z.string({ required_error: 'restaurantDetails is required' }).trim(),
-  cuisineTypeId: z.number({ required_error: 'cuisineTypeId is required' }),
-  address: z.string({ required_error: 'address is required' }).trim(),
-  phoneNumber: z.string({ required_error: 'phoneNumber is required' }).trim(),
-  latitude: z.number({ required_error: 'latitude is required' }),
-  longitude: z.number({ required_error: 'longitude is required' }),
-  profilePicture: z.string({ required_error: 'profilePicture is required' }).trim(),
+  businessName: z.string({ required_error: 'Business name is required' }).trim(),
+  address: z.string({ required_error: 'Address is required' }).trim(),
+  phoneNumber: z.string({ required_error: 'Phone number is required' }).trim(),
+  website: z.string().url().optional(),
+  instagram: z.string().url().optional(),
+  twitter: z.string().url().optional(),
+  facebook: z.string().url().optional(),
+  description: z.string({ required_error: 'Description is required' }).trim(),
+  profileImageUrl: z.string().optional(),
 });
 
 export type UpdateProfileSchema = z.infer<typeof updateProfileSchema>;
@@ -62,7 +62,7 @@ const dayHourSchema = z
     day: z.string({ required_error: 'day is required' }),
     startTime: z.string().optional(),
     endTime: z.string().optional(),
-    isClosed: z.boolean().optional(),
+    isClosed: z.boolean().optional().default(false),
   })
   .refine(
     data => {
@@ -75,8 +75,9 @@ const dayHourSchema = z
   );
 
 export const setOperationHoursSchema = z.object({
-  restaurantId: z.number({ required_error: 'restaurantId is required' }),
-  hours: z.array(dayHourSchema).length(7, 'Exactly 7 days of hours must be provided'),
+  hours: z
+    .array(dayHourSchema)
+    .length(7, 'Exactly 7 days of hours must be provided'),
 });
 
 export type SetOperationHoursSchema = z.infer<typeof setOperationHoursSchema>;
@@ -96,6 +97,38 @@ export const uploadRestaurantImagesSchema = z.object({
 });
 
 export type UploadRestaurantImagesSchema = z.infer<typeof uploadRestaurantImagesSchema>;
+
+export const setCapacitySchema = z.object({
+  totalCapacity: z
+    .number({ required_error: 'Total capacity is required' })
+    .int('Must be an integer')
+    .positive('Must be greater than 0'),
+});
+
+export type SetCapacitySchema = z.infer<typeof setCapacitySchema>;
+
+export const setServiceTypeSchema = z.object({
+  serviceType: z.enum(Object.values(ServiceType) as [string, ...string[]]),
+});
+
+export type SetServiceTypeInput = z.infer<typeof setServiceTypeSchema>;
+
+export const setGalleryImagesSchema = z.object({
+  images: z
+    .array(
+      z.object({
+        url: z
+          .string()
+          .min(1, 'Image URL (key) is required')
+          .refine(val => !val.startsWith('http'), {
+            message: 'Only S3 keys (not full URLs) are allowed',
+          }),
+      })
+    )
+    .min(1, 'At least one image is required'),
+});
+
+export type SetGalleryImages = z.infer<typeof setGalleryImagesSchema>;
 
 export const setMainImageSchema = z.object({
   restaurantId: z.number({ required_error: 'restaurantId is required' }),

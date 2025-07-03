@@ -12,6 +12,14 @@ ProducerProfileRouter.use(checkStatus);
 
 ProducerProfileRouter.put('/updateProfile', ProfileController.updateProfile);
 ProducerProfileRouter.get('/getProfile', ProfileController.getProfile);
+ProducerProfileRouter.post('/setOperationalHours', ProfileController.setOperationalHours);
+ProducerProfileRouter.get('/getOperationalDays', ProfileController.getOperationalDays);
+ProducerProfileRouter.post('/capacity', ProfileController.setCapacity);
+ProducerProfileRouter.post('/setServiceType', ProfileController.setServiceType);
+ProducerProfileRouter.post('/setGalleryImages', ProfileController.setGalleryImages);
+ProducerProfileRouter.get('/getGalleryImages', ProfileController.getGalleryImages);
+
+// ProducerProfileRouter.get('/getProfile', ProfileController.getProfile);
 ProducerProfileRouter.post('/getPreSignedUrl', ProfileController.getPreSignedUrl);
 ProducerProfileRouter.post('/changeCurrentPassword', ProfileController.changeCurrentPassword);
 ProducerProfileRouter.get('/getDeleteReasons', ProfileController.getDeleteReasons);
@@ -19,7 +27,6 @@ ProducerProfileRouter.delete('/deleteAccount/:id', ProfileController.deleteAccou
 ProducerProfileRouter.post('/uploadDocuments', ProfileController.uploadDocuments);
 ProducerProfileRouter.post('/uploadMenu', ProfileController.uploadMenu);
 ProducerProfileRouter.get('/getMenu', ProfileController.getMenu);
-ProducerProfileRouter.post('/setOperationalHours', ProfileController.setOperationalHours);
 ProducerProfileRouter.post('/setSlotDuration', ProfileController.setSlotDuration);
 ProducerProfileRouter.get('/getSlotDuration', ProfileController.getSlotDuration);
 ProducerProfileRouter.post('/addUnavailableSlot', ProfileController.addUnavailableSlot);
@@ -42,7 +49,7 @@ ProducerProfileRouter.post('/getRestaurantSlotsByDate', ProfileController.getRes
 ProducerProfileRouter.get('/bookingChart', ProfileController.bookingChart);
 ProducerProfileRouter.get('/customerChart', ProfileController.customerChart);
 ProducerProfileRouter.get('/getRepeatAndNewCustomerCounts', ProfileController.getRepeatAndNewCustomerCounts);
-ProducerProfileRouter.get( "/getNotifications", ProfileController.getNotifications);
+ProducerProfileRouter.get("/getNotifications", ProfileController.getNotifications);
 ProducerProfileRouter.put("/readNotification/:id", ProfileController.readNotification);
 
 export default ProducerProfileRouter;

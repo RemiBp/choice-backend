@@ -7,7 +7,7 @@ config();
 
 const bucketName = process.env.AWS_S3_BUCKET_NAME || '';
 
-export const getPresignedUploadUrlForImage = async (
+export const getPresignedUploadUrl = async (
   filename: string,
   contentType: string,
   ACL: boolean,

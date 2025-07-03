@@ -8,6 +8,7 @@ import {
   SocialLoginRepository,
   UserRepository,
   BusinessProfileRepository,
+  ProducerRepository,
 } from '../../repositories';
 import { sendOTPEmail } from '../mail.service';
 import { generateOTP } from '../../utils/generateOTP';
@@ -15,10 +16,13 @@ import { BadRequestError } from '../../errors/badRequest.error';
 import { NotFoundError } from '../../errors/notFound.error';
 import { addMinutes } from 'date-fns';
 import {
+  CreateProducer,
   ForgotPassword,
+  GetPresignedDocumentInput,
   LoginSchema,
   ResetPassword,
   SignUp,
+  SubmitDocumentsInput,
   VerifyOtpSchema,
 } from '../../validators/producer/auth.validation';
 import { generateHashedPassword } from '../../utils/generateHashedPassword';
@@ -31,6 +35,31 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 import PostgresDataSource from '../../data-source';
 import { access } from 'fs';
 import { businessRoles } from '../../utils/businessRoles';
+import { BusinessRole } from '../../enums/Producer.enum';
+import { ProducerStatus } from '../../enums/producerStatus.enum';
+import { getPresignedUploadUrl } from '../../utils/s3Service';
+import s3Service from '../s3.service';
+import { PreSignedURL } from '../../validators/producer/profile.validation';
+
+export const createProducer = async (input: CreateProducer) => {
+  const existing = await ProducerRepository.findOne({
+    where: { placeId: input.placeId },
+  });
+
+  if (existing) {
+    throw new BadRequestError('Producer with this Place ID already exists');
+  }
+
+  const producer = ProducerRepository.create({
+    ...input,
+    status: ProducerStatus.PENDING,
+    isActive: true,
+    isDeleted: false,
+    user: null,
+  });
+
+  return await ProducerRepository.save(producer);
+};
 
 export const register = async (signUpInput: SignUp) => {
   const queryRunner = PostgresDataSource.createQueryRunner();
@@ -97,6 +126,19 @@ export const register = async (signUpInput: SignUp) => {
     });
 
     await queryRunner.manager.save(BusinessProfileRepository.target, businessProfile);
+
+    const producer = ProducerRepository.create({
+      name: businessName,
+      address: '',
+      placeId: `${savedUser.id}`,
+      type: role as BusinessRole,
+      status: ProducerStatus.PENDING,
+      isActive: true,
+      isDeleted: false,
+      user: savedUser,
+    });
+
+    await queryRunner.manager.save(ProducerRepository.target, producer);
 
     await queryRunner.commitTransaction();
 
@@ -229,6 +271,40 @@ export const verifyOtp = async (verifyOtpObject: VerifyOtpSchema) => {
     console.error('Error in verifyOtp', { error, verifyOtpObject }, 'AuthService');
     throw error;
   }
+};
+
+export const getPreSignedUrl = async (userId: number, getPreSignedURLObject: PreSignedURL) => {
+  try {
+    const { fileName, contentType, folderName } = getPreSignedURLObject;
+    const user = await UserRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+    const { url, keyName } = await s3Service.getPresignedUploadUrl(fileName, contentType, true, folderName);
+    return { url, keyName };
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const submitDocument = async (userId: number, input: SubmitDocumentsInput) => {
+  const user = await UserRepository.findOne({
+    where: { id: userId },
+    relations: ['producer'],
+  });
+
+  if (!user || !user.producer) {
+    throw new NotFoundError('Producer not found for this user');
+  }
+
+  const producer = user.producer;
+
+  producer.document1 = input.document1;
+  producer.document1Expiry = input.document1Expiry;
+  producer.document2 = input.document2;
+  producer.document2Expiry = input.document2Expiry;
+
+  await ProducerRepository.save(producer);
 };
 
 export const resendSignUpOtp = async (validationObject: ForgotPassword) => {

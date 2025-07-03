@@ -21,6 +21,10 @@ import RestaurantPaymentMethods from '../models/RestaurantPaymentMethods';
 import FavouriteRestaurant from '../models/FavouriteRestaurant';
 import UnavailableSlot from '../models/UnavailableSlot';
 import BusinessProfile from '../models/BusinessProfile';
+import OpeningHours from '../models/OpeningHours';
+import Producer from '../models/Producer';
+import Event from '../models/Event';
+import Photo from '../models/Photos';
 
 export const UserRepository = PostgresDataSource.getRepository(User);
 export const RolesRepository = PostgresDataSource.getRepository(Roles);
@@ -44,4 +48,7 @@ export const RestaurantPaymentMethodsRepository = PostgresDataSource.getReposito
 export const FavouriteRestaurantRepository = PostgresDataSource.getRepository(FavouriteRestaurant);
 export const UnavailableSlotRepository = PostgresDataSource.getRepository(UnavailableSlot);
 export const BusinessProfileRepository = PostgresDataSource.getRepository(BusinessProfile);
-
+export const OpeningHoursRepository = PostgresDataSource.getRepository(OpeningHours);
+export const ProducerRepository = PostgresDataSource.getRepository(Producer);
+export const EventRepository = PostgresDataSource.getRepository(Event);
+export const PhotoRepository = PostgresDataSource.getRepository(Photo);

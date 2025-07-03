@@ -23,8 +23,9 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
 
       if (typeof user !== 'string' && 'id' in user) {
         const payload = user as UserPayload;
-        if (payload.role.id !== 2) {
-          res.status(401).json({ message: 'User is not a customer' });
+        const producerRoles = ['restaurant', 'leisure', 'wellness'];
+        if (!producerRoles.includes(payload.role.name)) {
+          return res.status(401).json({ message: 'User is not a producer' });
         }
         req.userId = payload.id;
         next();

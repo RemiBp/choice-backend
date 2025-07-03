@@ -4,6 +4,8 @@ import {
   Column,
   OneToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import User from './User';
 
@@ -15,7 +17,37 @@ export default class BusinessProfile {
   @Column({ unique: true })
   businessName: string;
 
+  @Column({ nullable: true })
+  address: string;
+
+  @Column({ nullable: true })
+  phoneNumber: string;
+
+  @Column({ nullable: true })
+  website?: string;
+
+  @Column({ nullable: true })
+  instagram?: string;
+
+  @Column({ nullable: true })
+  twitter?: string;
+
+  @Column({ nullable: true })
+  facebook?: string;
+
+  @Column({ nullable: true })
+  description: string;
+
+  @Column({ nullable: true })
+  profileImageUrl?: string;
+
   @OneToOne(() => User, user => user.businessProfile, { onDelete: 'CASCADE' })
   @JoinColumn()
   user: User;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

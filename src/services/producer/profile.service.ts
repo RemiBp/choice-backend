@@ -4,21 +4,28 @@ import {
   PreSignedURL,
   ReviewsAndRatingsSchema,
   reviewsAndRatingsSchema,
+  SetCapacitySchema,
+  SetGalleryImages,
   SetMainImageSchema,
   SetOperationHoursSchema,
+  SetServiceTypeInput,
   UpdateProfileSchema,
   UploadRestaurantImagesSchema,
 } from '../../validators/producer/profile.validation';
 import {
   BookingRepository,
+  BusinessProfileRepository,
   CuisineTypeRepository,
   DeletedUsersRepository,
   DeleteReasonRepository,
   HelpAndSupportRepository,
   NotificationRepository,
+  OpeningHoursRepository,
   OperationalHourRepository,
   PasswordRepository,
   PaymentMethodsRepository,
+  PhotoRepository,
+  ProducerRepository,
   RestaurantImagesRepository,
   RestaurantPaymentMethodsRepository,
   RestaurantRepository,
@@ -36,52 +43,64 @@ import { generateSlots } from '../../utils/generateHourlySlots';
 import RestaurantPaymentMethods from '../../models/RestaurantPaymentMethods';
 import { Between, In, MoreThan } from 'typeorm';
 import { getCurrentTimeInUTCFromTimeZone, getTodayDateInTimeZone, toStartOfDay } from '../../utils/getTime';
+import { mapBusinessProfile, mapProducer } from '../../utils/profile.mapper';
 
 export const updateProfile = async (userId: number, updateProfileObject: UpdateProfileSchema) => {
   try {
     const {
-      restaurantName,
-      restaurantDetails,
-      cuisineTypeId,
-      phoneNumber,
+      businessName,
       address,
-      latitude,
-      longitude,
-      profilePicture,
+      phoneNumber,
+      website,
+      instagram,
+      twitter,
+      facebook,
+      description,
+      profileImageUrl,
     } = updateProfileObject;
-    const user = await UserRepository.findOne({ where: { id: userId } });
+
+    const user = await UserRepository.findOne({
+      where: { id: userId },
+      relations: ['businessProfile'],
+    });
+
     if (!user) {
       throw new NotFoundError('User not found');
     }
-    const restaurant = await RestaurantRepository.findOne({
-      where: { user: { id: userId } },
-    });
-    if (!restaurant) {
-      throw new NotFoundError('Restaurant not found');
-    }
-    const cuisineType = await CuisineTypeRepository.findOne({
-      where: { id: cuisineTypeId },
-    });
-    if (!cuisineType) {
-      throw new NotFoundError('Cuisine type not found');
-    }
-    user.phoneNumber = phoneNumber;
-    user.profilePicture = profilePicture;
-    const updateUser = await UserRepository.save(user);
-    restaurant.restaurantName = restaurantName;
-    restaurant.restaurantDetails = restaurantDetails;
-    restaurant.address = address;
-    restaurant.latitude = latitude;
-    restaurant.longitude = longitude;
-    restaurant.locationPoint = {
-      type: 'Point',
-      coordinates: [longitude, latitude],
-    };
-    restaurant.cuisineType = cuisineType;
-    restaurant.cuisineTypeId = cuisineTypeId;
-    await RestaurantRepository.save(restaurant);
 
-    return { message: 'Profile Updated successfully' };
+    let profile = user.businessProfile;
+
+    if (!profile) {
+      profile = BusinessProfileRepository.create({
+        businessName,
+        address,
+        phoneNumber,
+        website,
+        instagram,
+        twitter,
+        facebook,
+        description,
+        profileImageUrl,
+        user,
+      });
+    } else {
+      profile.businessName = businessName;
+      profile.address = address;
+      profile.phoneNumber = phoneNumber;
+      profile.website = website;
+      profile.instagram = instagram;
+      profile.twitter = twitter;
+      profile.facebook = facebook;
+      profile.description = description;
+      profile.profileImageUrl = profileImageUrl ?? profile.profileImageUrl;
+    }
+
+    user.phoneNumber = phoneNumber;
+
+    await BusinessProfileRepository.save(profile);
+    await UserRepository.save(user);
+
+    return { message: 'Profile updated successfully' };
   } catch (error) {
     console.error('Error in updateProfile', { error });
     throw error;
@@ -89,41 +108,61 @@ export const updateProfile = async (userId: number, updateProfileObject: UpdateP
 };
 
 export const getProfile = async (userId: number) => {
-  try {
-    const user = await UserRepository.findOne({
-      where: {
-        id: userId,
-        isActive: true,
-      },
-      relations: ['restaurant', 'restaurant.cuisineType'],
-    });
-    if (!user) {
-      throw new NotFoundError('User not found');
-    }
-    const restaurantResponse = {
-      id: user.id,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      profilePicture: user.profilePicture,
-      restaurantName: user.restaurant.restaurantName,
-      restaurantDetails: user.restaurant.restaurantDetails,
-      cuisineType: user.restaurant.cuisineType,
-      cuisineTypeId: user.restaurant.cuisineTypeId,
-      address: user.restaurant.address,
-      latitude: user.restaurant.latitude,
-      longitude: user.restaurant.longitude,
-      certificateOfTourism: user.restaurant.certificateOfTourism,
-      certificateOfHospitality: user.restaurant.certificateOfHospitality,
-      rating: user.restaurant.rating,
-      accountStatus: user.restaurant.accountStatus,
+  const user = await UserRepository.findOne({
+    where: { id: userId },
+    relations: ['businessProfile', 'producer'],
+  });
 
-    };
-    return { restaurant: restaurantResponse };
-  } catch (error) {
-    console.error('Error in getProfile', { error });
-    throw error;
+  if (!user) {
+    throw new NotFoundError('User not found');
   }
+
+  return {
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    isVerified: user.isVerified,
+    businessProfile: user.businessProfile ? mapBusinessProfile(user.businessProfile) : null,
+    producer: user.producer ? mapProducer(user.producer) : null,
+  };
 };
+
+
+// export const getProfile = async (userId: number) => {
+//   try {
+//     const user = await UserRepository.findOne({
+//       where: {
+//         id: userId,
+//         isActive: true,
+//       },
+//       relations: ['restaurant', 'restaurant.cuisineType'],
+//     });
+//     if (!user) {
+//       throw new NotFoundError('User not found');
+//     }
+//     const restaurantResponse = {
+//       id: user.id,
+//       email: user.email,
+//       phoneNumber: user.phoneNumber,
+//       profilePicture: user.profilePicture,
+//       restaurantName: user.restaurant.restaurantName,
+//       restaurantDetails: user.restaurant.restaurantDetails,
+//       cuisineType: user.restaurant.cuisineType,
+//       cuisineTypeId: user.restaurant.cuisineTypeId,
+//       address: user.restaurant.address,
+//       latitude: user.restaurant.latitude,
+//       longitude: user.restaurant.longitude,
+//       certificateOfTourism: user.restaurant.certificateOfTourism,
+//       certificateOfHospitality: user.restaurant.certificateOfHospitality,
+//       rating: user.restaurant.rating,
+//       accountStatus: user.restaurant.accountStatus,
+
+//     };
+//     return { restaurant: restaurantResponse };
+//   } catch (error) {
+//     console.error('Error in getProfile', { error });
+//     throw error;
+//   }
+// };
 
 export const getPreSignedUrl = async (userId: number, getPreSignedURLObject: PreSignedURL) => {
   try {
@@ -208,24 +247,24 @@ export const deleteAccount = async (userId: number, deleteReasonId: number) => {
     }
 
     const getBookings = await BookingRepository.find({
-          where: {
-            restaurant: {
-              id: userId,
-            },
-            status: In(['scheduled', 'inProgress']),
-          }
-        })
-    
-        if (getBookings.length > 0) {
-          const cancelGetBookings = getBookings.map(async (booking: { id: any; }) => {
-            await BookingRepository.update(booking.id, {
-              status: 'cancelled',
-              cancelBy: 'restaurant',
-              cancelReason: 'Restaurant Account deleted',
-            });
-          })
-          await Promise.all(cancelGetBookings);
-        }
+      where: {
+        restaurant: {
+          id: userId,
+        },
+        status: In(['scheduled', 'inProgress']),
+      }
+    })
+
+    if (getBookings.length > 0) {
+      const cancelGetBookings = getBookings.map(async (booking: { id: any; }) => {
+        await BookingRepository.update(booking.id, {
+          status: 'cancelled',
+          cancelBy: 'restaurant',
+          cancelReason: 'Restaurant Account deleted',
+        });
+      })
+      await Promise.all(cancelGetBookings);
+    }
 
     const timestamp = Date.now();
     const [localPart, domain] = user.email.split('@');
@@ -305,74 +344,189 @@ export const getMenu = async (userId: number) => {
     throw error;
   }
 };
-export const setOperationalHours = async (input: SetOperationHoursSchema) => {
-  const { restaurantId, hours } = input;
+export const setServiceType = async (input: SetServiceTypeInput & { userId: number }) => {
+  const { userId, serviceType } = input;
+
+  const producer = await ProducerRepository.findOne({
+    where: { userId },
+  });
+
+  if (!producer) {
+    throw new NotFoundError('Producer not found');
+  }
+
+  producer.serviceType = serviceType;
+  await ProducerRepository.save(producer);
+
+  return {
+    message: 'Service type updated successfully.',
+  };
+};
+
+export const setGalleryImages = async (userId: number, input: SetGalleryImages) => {
+  const user = await UserRepository.findOne({
+    where: { id: userId },
+    relations: ['producer'],
+  });
+
+  if (!user || !user.producer) {
+    throw new NotFoundError('Producer not found for this user');
+  }
+
+  const producer = user.producer;
+
+  const photos = input.images.map(img =>
+    PhotoRepository.create({
+      url: img.url,
+      producer: producer,
+    })
+  );
+
+  await PhotoRepository.save(photos);
+};
+
+export const getGalleryImages = async (userId: number) => {
+  const user = await UserRepository.findOne({
+    where: { id: userId },
+    relations: ['producer'],
+  });
+
+  if (!user || !user.producer) {
+    throw new NotFoundError('Producer not found for this user');
+  }
+
+  const photos = await PhotoRepository.find({
+    where: { producer: { id: user.producer.id } },
+    order: { id: 'ASC' },
+  });
+
+  return photos.map((photo: { id: any; url: any; source: any; }) => ({
+    id: photo.id,
+    url: photo.url,
+    source: photo.source,
+  }));
+};
+
+export const setOperationalHours = async (input: SetOperationHoursSchema & { userId: number }) => {
+  const { userId, hours } = input;
 
   try {
-    if (restaurantLocks.get(restaurantId)) {
-      throw new BadRequestError('Slot generation is already in progress for this restaurant.');
-    }
-    if (!restaurantId || !Array.isArray(hours) || hours.length !== 7) {
-      throw new BadRequestError('restaurantId and 7 days of hours are required.');
+    if (!Array.isArray(hours) || hours.length !== 7) {
+      throw new BadRequestError('Exactly 7 days of hours are required.');
     }
 
-    const user = await UserRepository.findOne({
-      where: { id: restaurantId },
+    const producer = await ProducerRepository.findOne({
+      where: { userId },
+      relations: ['openingHours', 'user'],
     });
 
-    if (!user) {
-      throw new NotFoundError('Restaurant not found');
-    }
-    const restaurant = await RestaurantRepository.findOne({
-      where: { user: { id: restaurantId } },
-    });
-
-    if (!restaurant) {
-      throw new NotFoundError('Restaurant not found');
-    }
-    let slotDuration = 0;
-    if (restaurant.slotDuration) {
-      slotDuration = restaurant.slotDuration;
-    } else {
-      throw new Error('Slot duration not found');
+    if (!producer) {
+      throw new NotFoundError('producer not found');
     }
 
-    for (const entry of hours) {
-      const { day, startTime, endTime, isClosed = false } = entry;
+    const dayMap = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ] as const;
 
+    type Day = (typeof dayMap)[number];
+    type TimeKey = `${Day}Open` | `${Day}Close`;
+
+    const openingHoursData: Partial<Record<TimeKey, string | null>> = {};
+
+    for (const { day, startTime, endTime, isClosed = false } of hours) {
       if (!isClosed && (!startTime || !endTime)) {
-        throw new BadRequestError(`Start and end time are required for open day: ${day}`);
+        throw new BadRequestError(
+          `Start and end time are required for open day: ${day}`
+        );
       }
-      const existing = await OperationalHourRepository.findOne({
-        where: { user: { id: restaurantId }, day },
-        relations: ['user'],
-      });
 
-      if (existing) {
-        existing.isClosed = isClosed;
-        existing.startTime = isClosed ? null : startTime;
-        existing.endTime = isClosed ? null : endTime;
-        await OperationalHourRepository.save(existing);
-      } else {
-        const newHour = OperationalHourRepository.create({
-          user,
-          day,
-          startTime: isClosed ? null : startTime,
-          endTime: isClosed ? null : endTime,
-          isClosed,
-        });
-        await OperationalHourRepository.save(newHour);
-      }
+      const lowerDay = day.toLowerCase() as Day;
+
+      openingHoursData[`${lowerDay}Open`] = isClosed ? null : startTime;
+      openingHoursData[`${lowerDay}Close`] = isClosed ? null : endTime;
     }
-    
+
+    let openingHours = producer.openingHours;
+
+    if (openingHours) {
+      Object.assign(openingHours, openingHoursData);
+    } else {
+      openingHours = OpeningHoursRepository.create({
+        ...openingHoursData,
+        producer,
+      });
+    }
+
+    await OpeningHoursRepository.save(openingHours);
 
     return {
       message: 'Operational hours set successfully.',
     };
   } catch (error) {
-    console.error('Error in setOperationalHours', { input, error }, 'RestaurantService');
+    console.error('Error in setOperationalHours', { input, error });
     throw error;
   }
+};
+
+export const getOperationalDays = async (userId: number) => {
+  try {
+    const producer = await ProducerRepository.findOne({
+      where: { userId },
+      relations: ['openingHours'],
+    });
+
+    if (!producer) {
+      throw new NotFoundError('Producer not found');
+    }
+
+    const openingHours = producer.openingHours;
+
+    if (!openingHours) {
+      return {
+        message: 'No operational hours set for this producer.',
+        operationalDays: [],
+      };
+    }
+
+    const operationalDays = [
+      { day: 'Monday', startTime: openingHours.mondayOpen, endTime: openingHours.mondayClose },
+      { day: 'Tuesday', startTime: openingHours.tuesdayOpen, endTime: openingHours.tuesdayClose },
+      { day: 'Wednesday', startTime: openingHours.wednesdayOpen, endTime: openingHours.wednesdayClose },
+      { day: 'Thursday', startTime: openingHours.thursdayOpen, endTime: openingHours.thursdayClose },
+      { day: 'Friday', startTime: openingHours.fridayOpen, endTime: openingHours.fridayClose },
+      { day: 'Saturday', startTime: openingHours.saturdayOpen, endTime: openingHours.saturdayClose },
+      { day: 'Sunday', startTime: openingHours.sundayOpen, endTime: openingHours.sundayClose },
+    ];
+
+    return {
+      operationalDays,
+    };
+  } catch (error) {
+    console.error('Error in getOperationalDays', { userId, error });
+    throw error;
+  }
+}
+
+export const setCapacity = async (input: SetCapacitySchema & { userId: number }) => {
+  const { userId, totalCapacity } = input;
+
+  const producer = await ProducerRepository.findOne({
+    where: { userId },
+  });
+
+  if (!producer) throw new NotFoundError('Producer not found');
+
+  producer.totalCapacity = totalCapacity;
+
+  await ProducerRepository.save(producer);
+
+  return { message: 'Capacity set successfully' };
 };
 
 export const setSlotDuration = async (restaurantId: number, slotDuration: number) => {
@@ -417,7 +571,7 @@ export const getUnavailableSlots = async (
   try {
     const currentTime = getCurrentTimeInUTCFromTimeZone(timeZone);
     const todayDate = getTodayDateInTimeZone(timeZone);
-    if(date && date < todayDate){
+    if (date && date < todayDate) {
       throw new BadRequestError('Kindly select a future date');
     }
 
@@ -458,7 +612,7 @@ export const addUnavailableSlot = async (restaurantId: number, slotIds: number[]
     if (existingSlots.length > 0) {
       await UnavailableSlotRepository.remove(existingSlots);
     }
-    
+
 
     // Validate slot existence
     const slots = await SlotRepository.findByIds(slotIds, { relations: ['user'] });
@@ -1169,7 +1323,7 @@ export const getRestaurantSlotsByDate = async (restaurantId: number, timeZone: s
     });
 
     const unavailableSlotIds = unavailableSlots.map((slot: { slotId: number }) => slot.slotId);
-    
+
 
     const slotQuery = SlotRepository.createQueryBuilder('slot')
       .innerJoin('slot.user', 'user')
@@ -1181,14 +1335,14 @@ export const getRestaurantSlotsByDate = async (restaurantId: number, timeZone: s
       .orderBy('slot.startTime', 'ASC')
       .getMany();
 
-      const slotsUpdated = slots.map((slot: { id: any; }) => {
-        let isUnavailable = false;
-        isUnavailable = unavailableSlotIds.includes(slot.id);
-        return {
-          ...slot,
-          isUnavailable,
-        };
-      });
+    const slotsUpdated = slots.map((slot: { id: any; }) => {
+      let isUnavailable = false;
+      isUnavailable = unavailableSlotIds.includes(slot.id);
+      return {
+        ...slot,
+        isUnavailable,
+      };
+    });
 
     return {
       slots: slotsUpdated,
@@ -1245,8 +1399,8 @@ export const bookingChart = async (restaurantId: number, chartType: string, time
           values: days.map((d) => dayCountMap[d]),
         },
       };
-    } 
-    
+    }
+
     else if (chartType === 'lastMonth') {
       const OneMonthAgoDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
       const OneMonthAgoIso = OneMonthAgoDate.toISOString().split('T')[0];
@@ -1259,7 +1413,7 @@ export const bookingChart = async (restaurantId: number, chartType: string, time
           endDateTime: Between(toStartOfOneMonthAgo, currentTime),
         },
       });
-      
+
 
       // Group by 4 weeks (roughly divide 30 days to 4 parts)
       const weekBuckets = [0, 0, 0, 0];

@@ -38,13 +38,13 @@ const allowedContentTypesForAttachments = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/x-patch',
   'application/pdf',
-  'application/zip',
-  'application/gzip',
-  'application/x-gzip',
-  'application/x-tar',
-  'video/mp4',
-  'video/quicktime',
-  'video/webm',
+  // 'application/zip',
+  // 'application/gzip',
+  // 'application/x-gzip',
+  // 'application/x-tar',
+  // 'video/mp4',
+  // 'video/quicktime',
+  // 'video/webm',
 ];
 
 async function getPresignedUploadUrlForAudio(

@@ -17,11 +17,16 @@ import OpeningHours from './OpeningHours';
 import User from './User';
 import { BusinessRole } from '../enums/Producer.enum';
 import { ProducerStatus } from '../enums/producerStatus.enum';
+import { ServiceType } from '../enums/serviceType.enum';
+import Event from './Event';
 
 @Entity('Producers')
 export default class Producer {
     @PrimaryGeneratedColumn()
     id: number;
+
+    @Column({ nullable: true })
+    userId: number;
 
     @Column()
     name: string;
@@ -63,11 +68,21 @@ export default class Producer {
     @Column({ nullable: true })
     website: string;
 
+    @Column({ nullable: true })
+    totalCapacity: number;
+
     @Column({
         type: 'enum',
         enum: BusinessRole,
     })
     type: BusinessRole;
+
+    @Column({
+        type: 'enum',
+        enum: ServiceType,
+        nullable: true,
+    })
+    serviceType: ServiceType;
 
     @Column({
         type: 'enum',
@@ -88,7 +103,13 @@ export default class Producer {
     @Column({ nullable: true })
     document2: string;
 
-    @OneToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
+    @Column({ type: 'date', nullable: true })
+    document1Expiry: Date;
+
+    @Column({ type: 'date', nullable: true })
+    document2Expiry: Date;
+
+    @OneToOne(() => User, { nullable: true, onDelete: 'CASCADE' })
     @JoinColumn({ name: 'userId' })
     user: User;
 
@@ -103,6 +124,9 @@ export default class Producer {
 
     @OneToOne(() => OpeningHours, hours => hours.producer)
     openingHours: OpeningHours;
+
+    @OneToMany(() => Event, event => event.producer)
+    events: Event[];
 
     @CreateDateColumn()
     createdAt: Date;
