@@ -8,31 +8,80 @@ import {
 
 
 export const createPostSchema = z.object({
-  type: z.nativeEnum(PostType),
-  status: z.nativeEnum(PostStatus).default(PostStatus.DRAFT),
-  description: z.string().min(1),
-  link: z.string().url().optional(),
-  tags: z.array(z.string()).optional(),
-  coverImage: z.string().optional(),
-  imageUrls: z.array(z.string()).max(5).optional(),
-  userId: z.number().optional(),
+  type: z.nativeEnum(PostType, {
+    required_error: "Post type is required",
+    invalid_type_error: "Invalid post type",
+  }),
+
+  status: z.nativeEnum(PostStatus)
+    .default(PostStatus.DRAFT)
+    .describe("Post status (default: DRAFT)"),
+
+  description: z.string({
+    required_error: "Description is required",
+    invalid_type_error: "Description must be text",
+  }).min(1, "Description cannot be empty"),
+
+  link: z.string()
+    .url("Invalid URL format (e.g., https://example.com)")
+    .optional(),
+
+  tags: z.array(z.string())
+    .optional()
+    .describe("Tags (e.g., ['tech', 'design'])"),
+
+  coverImage: z.string()
+    .optional()
+    .describe("Cover image URL"),
+
+  imageUrls: z.array(z.string())
+    .max(5, "Maximum 5 images allowed")
+    .optional(),
+
+  userId: z.number({
+    required_error: "User ID is required",
+    invalid_type_error: "User ID must be a number",
+  })
+    .int("User ID must be an integer")
+    .positive("User ID must be positive"),
+
   producerId: z.number().optional(),
-  publishDate: z.string().datetime().optional(),
+
+  publishDate: z.string()
+    .datetime("Invalid ISO 8601 date format (e.g., 2023-01-01T00:00:00Z)")
+    .optional(),
 });
 
 export type CreatePostInput = z.infer<typeof createPostSchema>;
 
 export const createProducerPostSchema = z.object({
-  type: z.enum(['restaurant', 'leisure', 'wellness']),
-  status: z.nativeEnum(PostStatus).default(PostStatus.DRAFT),
-  title: z.string().min(1),
-  description: z.string().min(1),
-  location: z.string().min(1),
+  type: z.enum(['restaurant', 'leisure', 'wellness'], {
+    required_error: 'Producer type is required',
+    invalid_type_error: 'Invalid producer type',
+  }),
+
+  status: z.nativeEnum(PostStatus).default(PostStatus.DRAFT).describe('Post status'),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().min(1, 'Description is required'),
+  location: z.string().min(1, 'Location is required'),
   tags: z.array(z.string()).optional(),
-  imageUrls: z.array(z.string().url()).max(5),
-  coverImage: z.string().url().optional(),
-  publishDate: z.string().optional()
+  imageUrls: z.array(z.string().url()).max(5, 'Maximum 5 images allowed'),
+  coverImage: z.string().url('Invalid cover image URL').optional(),
+  publishDate: z.string().datetime('Invalid ISO date format').optional(),
+  
+  userId: z.number({
+    required_error: 'User ID is required',
+    invalid_type_error: 'User ID must be a number',
+  })
+    .int('User ID must be an integer')
+    .positive('User ID must be positive'),
+
+  roleName: z.string({
+    required_error: 'Role name is required',
+    invalid_type_error: 'Role name must be a string',
+  }),
 });
+
 
 export type CreateProducerPostInput = z.infer<typeof createProducerPostSchema>;
 
@@ -80,7 +129,7 @@ export const CreateRatingSchema = z.union([
 export type CreateRatingInput = z.infer<typeof CreateRatingSchema>;
 
 export const EmotionSchema = z.object({
-  emotion: z.nativeEnum(EmotionType),
+  emotions: z.array(z.nativeEnum(EmotionType)).min(1, "At least one emotion is required"),
 });
 
 export type CreateEmotionInput = z.infer<typeof EmotionSchema>;

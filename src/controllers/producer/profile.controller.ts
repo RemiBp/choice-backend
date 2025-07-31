@@ -37,6 +37,25 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+export const getProducers = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response = await ProfileService.getProducers();
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getProducerbyId = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const producerId = Number(req.params.id);
+    const response = await ProfileService.getProducerById(producerId);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getPreSignedUrl = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;

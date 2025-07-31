@@ -13,7 +13,7 @@ import User from './User';
 import { EmotionType } from '../enums/post.enum';
 
 @Entity('PostEmotions')
-@Index('IDX_PostEmotion_userId_postId', ['userId', 'postId'], { unique: true })
+@Index('IDX_PostEmotion_userId_postId_emotion', ['userId', 'postId', 'emotion'], { unique: true })
 export default class PostEmotion {
     @PrimaryGeneratedColumn()
     id: number;

@@ -126,43 +126,25 @@ export const getProfile = async (userId: number) => {
   };
 };
 
+export const getProducers = async () => {
+  const producers = await ProducerRepository.find({
+    where: { isDeleted: false },
+  });
 
-// export const getProfile = async (userId: number) => {
-//   try {
-//     const user = await UserRepository.findOne({
-//       where: {
-//         id: userId,
-//         isActive: true,
-//       },
-//       relations: ['restaurant', 'restaurant.cuisineType'],
-//     });
-//     if (!user) {
-//       throw new NotFoundError('User not found');
-//     }
-//     const restaurantResponse = {
-//       id: user.id,
-//       email: user.email,
-//       phoneNumber: user.phoneNumber,
-//       profilePicture: user.profilePicture,
-//       restaurantName: user.restaurant.restaurantName,
-//       restaurantDetails: user.restaurant.restaurantDetails,
-//       cuisineType: user.restaurant.cuisineType,
-//       cuisineTypeId: user.restaurant.cuisineTypeId,
-//       address: user.restaurant.address,
-//       latitude: user.restaurant.latitude,
-//       longitude: user.restaurant.longitude,
-//       certificateOfTourism: user.restaurant.certificateOfTourism,
-//       certificateOfHospitality: user.restaurant.certificateOfHospitality,
-//       rating: user.restaurant.rating,
-//       accountStatus: user.restaurant.accountStatus,
+  return producers;
+};
 
-//     };
-//     return { restaurant: restaurantResponse };
-//   } catch (error) {
-//     console.error('Error in getProfile', { error });
-//     throw error;
-//   }
-// };
+export const getProducerById = async (id: number) => {
+  const producer = await ProducerRepository.findOne({
+    where: { id, isDeleted: false },
+  });
+
+  if (!producer) {
+    throw new NotFoundError('Producer not found');
+  }
+
+  return producer;
+};
 
 export const getPreSignedUrl = async (userId: number, getPreSignedURLObject: PreSignedURL) => {
   try {

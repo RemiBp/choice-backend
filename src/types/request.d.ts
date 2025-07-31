@@ -1,7 +1,13 @@
 import { Request } from 'express';
+import { RoleName } from '../enums/Producer.enum';
 
-declare module 'express' {
-  interface Request {
-    userId?: number;
+declare global {
+  namespace Express {
+    interface Request {
+      userId: number;
+      roleName: string;
+    }
   }
 }
+
+export { };

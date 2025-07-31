@@ -1,13 +1,17 @@
 import { Router } from 'express';
 import { ProfileController } from '../../controllers/producer/profile.controller';
-import { authenticateJWTForRestaurant, checkStatus } from '../../middlewares/restaurant.auth.middleware';
+import { authenticateJWT, checkStatus } from '../../middlewares/auth.middleware';
 
 const ProducerProfileRouter = Router();
 ProducerProfileRouter.get('/', (req, res) => {
   res.send('Hit Restaurant profile route');
 });
 
-ProducerProfileRouter.use(authenticateJWTForRestaurant);
+// For Scrapping
+ProducerProfileRouter.get('/getProducers', ProfileController.getProducers);
+ProducerProfileRouter.get('/getProducerbyId/:id', ProfileController.getProducerbyId);
+
+ProducerProfileRouter.use(authenticateJWT);
 ProducerProfileRouter.use(checkStatus);
 
 ProducerProfileRouter.put('/updateProfile', ProfileController.updateProfile);

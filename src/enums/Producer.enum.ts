@@ -4,4 +4,9 @@ export enum BusinessRole {
   WELLNESS = 'wellness',
 }
 
-
+export enum RoleName {
+  RESTAURANT = 'restaurant',
+  LEISURE = 'leisure',
+  WELLNESS = 'wellness',
+  USER = 'user',
+}

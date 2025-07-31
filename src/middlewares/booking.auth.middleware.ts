@@ -2,10 +2,6 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { UserRepository } from '../repositories';
 
-interface AuthenticatedRequest extends Request {
-    userId?: number;
-}
-
 interface UserPayload extends JwtPayload {
     id: number;
 }
@@ -29,7 +25,7 @@ export const authenticateJWTForBooking = (req: Request, res: Response, next: Nex
     }
 };
 
-export const checkStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const checkStatus = async (req: Request, res: Response, next: NextFunction) => {
     if (req.userId) {
         const userId = req.userId;
         const user = await UserRepository.findOne({ where: { id: userId, isDeleted: false } });

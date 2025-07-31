@@ -7,6 +7,7 @@ ProducerAuthRouter.get('/', (req, res) => {
   res.send('Hit Technician auth route');
 });
 
+// For scrapping
 ProducerAuthRouter.post('/createProducer', AuthController.createProducer);
 
 ProducerAuthRouter.post('/register', AuthController.register);

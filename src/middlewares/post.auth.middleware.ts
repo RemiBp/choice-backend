@@ -2,10 +2,10 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { UserRepository } from '../repositories';
 
-interface AuthenticatedRequest extends Request {
-    userId?: number;
-    roleName?: string;
-}
+// interface AuthenticatedRequest extends Request {
+//     userId?: number;
+//     roleName?: string;
+// }
 
 interface UserPayload extends JwtPayload {
     id: number;
@@ -15,7 +15,7 @@ interface UserPayload extends JwtPayload {
     };
 }
 
-export const authenticateJWTForBooking = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const authenticateJWTForBooking = (req: Request, res: Response, next: NextFunction) => {
     try {
         const authHeader = req.headers.authorization;
 
@@ -51,7 +51,7 @@ export const authenticateJWTForBooking = (req: AuthenticatedRequest, res: Respon
     }
 };
 
-export const checkStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const checkStatus = async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.userId) {
             return res.status(401).json({ message: 'User ID not found in request' });
@@ -76,9 +76,7 @@ export const checkStatus = async (req: AuthenticatedRequest, res: Response, next
     }
 };
 
-// ✅ Step 3: Role-based createPost permission
-export const checkPostCreationPermission = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    console.log("🚀 ~ checkPostCreationPermission ~ req:", req.roleName)
+export const checkPostCreationPermission = async (req: Request, res: Response, next: NextFunction) => {
     try {
         // const allowedRoles = ['user', 'restaurant', 'leisure', 'wellness'];
         const allowedRoles = ['user'];

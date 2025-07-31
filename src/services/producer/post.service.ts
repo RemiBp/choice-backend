@@ -11,7 +11,9 @@ import {
     PostShareRepository,
     PostStatisticsRepository,
 } from '../../repositories';
-import { CreateEmotionInput, CreatePostInput, CreateProducerPostInput, CreateRatingInput } from '../../validators/producer/post.validation';
+import { CreateEmotionInput, CreatePostInput, CreateProducerPostInput, CreateRatingInput, EmotionSchema } from '../../validators/producer/post.validation';
+import { EmotionType } from '../../enums/post.enum';
+import z from 'zod';
 
 export const createUserPost = async (userId: number, data: CreatePostInput) => {
 
@@ -26,7 +28,7 @@ export const createUserPost = async (userId: number, data: CreatePostInput) => {
         throw new BadRequestError('Cover image must be one of the uploaded images');
     }
 
-    const post = PostRepository.create({
+    const post = PostRepository.save({
         ...data,
         // producer,
         userId,
@@ -37,12 +39,10 @@ export const createUserPost = async (userId: number, data: CreatePostInput) => {
         shareCount: 0,
     });
 
-    const savedPost = await PostRepository.save(post);
-
     if (data.imageUrls?.length) {
         const images = data.imageUrls.map((url) =>
             PostImageRepository.create({
-                postId: savedPost.id,
+                postId: post.id,
                 url,
                 isCoverImage: url === data.coverImage,
             })
@@ -51,7 +51,7 @@ export const createUserPost = async (userId: number, data: CreatePostInput) => {
     }
 
     return {
-        postId: savedPost,
+        post: post,
     };
 };
 
@@ -72,7 +72,7 @@ export const createProducerPost = async (userId: number, roleName: string, data:
         throw new BadRequestError('Cover image must be one of the uploaded images');
     }
 
-    const post = PostRepository.create({
+    const post = PostRepository.save({
         ...data,
         tags: data.tags ?? [],
         isDeleted: false,
@@ -83,12 +83,10 @@ export const createProducerPost = async (userId: number, roleName: string, data:
         producerId: producer.id,
     });
 
-    const savedPost = await PostRepository.save(post);
-
     if (data.imageUrls?.length) {
         const images = data.imageUrls.map((url) =>
             PostImageRepository.create({
-                postId: savedPost.id,
+                postId: post.id,
                 url,
                 isCoverImage: url === data.coverImage,
             })
@@ -97,7 +95,7 @@ export const createProducerPost = async (userId: number, roleName: string, data:
     }
 
     return {
-        postId: savedPost,
+        post: post,
     };
 };
 
@@ -158,9 +156,7 @@ export const deletePost = async (userId: number, postId: number) => {
 
     await PostRepository.save(post);
 
-    return {
-        post,
-    };
+    return { post: post };
 };
 
 export const saveRatings = async (userId: number, postId: number, data: Omit<CreateRatingInput, 'postId'>) => {
@@ -186,7 +182,7 @@ export const saveRatings = async (userId: number, postId: number, data: Omit<Cre
     }
 
     const ratingEntities = Object.entries(ratings).map(([criteria, value]) =>
-        PostRatingRepository.create({
+        PostRatingRepository.save({
             userId,
             postId,
             criteria,
@@ -195,93 +191,66 @@ export const saveRatings = async (userId: number, postId: number, data: Omit<Cre
         })
     );
 
-    const saved = await PostRatingRepository.save(ratingEntities);
-
     return {
         postId,
-        count: saved.length,
+        count: ratingEntities.length,
     };
 };
 
-export const saveEmotions = async (userId: number, postId: number, data: CreateEmotionInput) => {
+export const saveEmotions = async (userId: number, postId: number, data: z.infer<typeof EmotionSchema>) => {
     const post = await PostRepository.findOneBy({ id: postId, isDeleted: false });
     if (!post) throw new NotFoundError('Post not found or already deleted');
 
-    let stats = await PostStatisticsRepository.findOneBy({ postId });
-    if (!stats) {
-        stats = PostStatisticsRepository.create({
-            postId,
-            totalLikes: 0,
-            totalShares: 0,
-            totalComments: 0,
-            totalRatings: 0,
-            emotionCounts: {},
-            criteriaRatings: {},
-        });
+    const savedEmotions = [];
+
+    for (const emotion of data.emotions) {
+        const existing = await PostEmotionRepository.findOneBy({ userId, postId, emotion });
+
+        if (!existing) {
+            const newEmotion = PostEmotionRepository.create({ userId, postId, emotion });
+            await PostEmotionRepository.save(newEmotion);
+            savedEmotions.push(emotion);
+        }
     }
 
-    stats.emotionCounts = stats.emotionCounts || {};
+    return {
+        postId,
+        savedEmotions,
+        message: savedEmotions.length
+            ? 'Emotions saved.'
+            : 'All emotions already exist.',
+    };
+};
 
-    const existing = await PostEmotionRepository.findOneBy({ userId, postId });
+export const updatePostEmotions = async (userId: number, postId: number, data: z.infer<typeof EmotionSchema>) => {
+    const post = await PostRepository.findOneBy({ id: postId, isDeleted: false });
+    if (!post) throw new NotFoundError('Post not found or already deleted');
 
-    if (existing) {
-        const oldEmotion = existing.emotion;
+    await PostEmotionRepository
+        .createQueryBuilder()
+        .delete()
+        .where("userId = :userId AND postId = :postId", { userId, postId })
+        .execute();
 
-        if (stats.emotionCounts[oldEmotion]) {
-            stats.emotionCounts[oldEmotion] = Math.max(0, stats.emotionCounts[oldEmotion] - 1);
-        }
-
-        existing.emotion = data.emotion;
-        existing.updatedAt = new Date();
-        await PostEmotionRepository.save(existing);
-    } else {
-        const newEmotion = PostEmotionRepository.create({
+    if (data.emotions.length > 0) {
+        const insertData = data.emotions.map((emotion) => ({
             userId,
             postId,
-            emotion: data.emotion,
-        });
-        await PostEmotionRepository.save(newEmotion);
+            emotion,
+        }));
+
+        await PostEmotionRepository
+            .createQueryBuilder()
+            .insert()
+            .into("PostEmotions")
+            .values(insertData)
+            .orIgnore()
+            .execute();
     }
-
-    stats.emotionCounts[data.emotion] = (stats.emotionCounts[data.emotion] || 0) + 1;
-
-    await PostStatisticsRepository.save(stats);
 
     return {
         postId,
-        emotion: data.emotion,
-    };
-};
-
-export const updatePostEmotions = async (userId: number, postId: number, data: CreateEmotionInput) => {
-
-    const post = await PostRepository.findOneBy({ id: postId, isDeleted: false });
-    if (!post) throw new NotFoundError('Post not found or already deleted');
-
-    const stats = await PostStatisticsRepository.findOneBy({ postId });
-    if (!stats) throw new NotFoundError('Post statistics not found');
-
-    stats.emotionCounts = stats.emotionCounts || {};
-
-    const existing = await PostEmotionRepository.findOneBy({ userId, postId });
-    if (!existing) throw new NotFoundError('No existing emotion found to update');
-
-    const oldEmotion = existing.emotion;
-    if (stats.emotionCounts[oldEmotion]) {
-        stats.emotionCounts[oldEmotion] = Math.max(0, stats.emotionCounts[oldEmotion] - 1);
-    }
-
-    existing.emotion = data.emotion;
-    existing.updatedAt = new Date();
-    await PostEmotionRepository.save(existing);
-
-    stats.emotionCounts[data.emotion] = (stats.emotionCounts[data.emotion] || 0) + 1;
-    await PostStatisticsRepository.save(stats);
-
-    return {
-        postId,
-        emotion: data.emotion,
-        updated: true,
+        savedEmotions: data.emotions,
     };
 };
 
@@ -357,14 +326,12 @@ export const addCommentToPost = async (userId: number, postId: number, comment: 
 
     const stats = await PostStatisticsRepository.findOneBy({ postId });
 
-    const newComment = PostCommentRepository.create({
+    const newComment = PostCommentRepository.save({
         userId,
         postId,
         comment: comment.trim(),
         isDeleted: false,
     });
-
-    await PostCommentRepository.save(newComment);
 
     post.commentCount += 1;
     if (stats) stats.totalComments += 1;
@@ -457,13 +424,11 @@ export const sharePost = async (userId: number, postId: number) => {
 
     if (alreadyShared) throw new BadRequestError('You have already shared this post');
 
-    const share = PostShareRepository.create({
+    const share = PostShareRepository.save({
         userId,
         postId,
         isDeleted: false,
     });
-
-    await PostShareRepository.save(share);
 
     post.shareCount += 1;
     if (stats) stats.totalShares += 1;
