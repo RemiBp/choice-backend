@@ -10,7 +10,7 @@ import User from './User';
 import Producer from './Producer';
 
 @Entity('Follows')
-export class Follow {
+export default class Follow {
   @PrimaryGeneratedColumn()
   id: number;
 

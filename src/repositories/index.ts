@@ -35,7 +35,7 @@ import PostLike from '../models/PostLike';
 import PostComment from '../models/PostComment';
 import PostShare from '../models/PostShare';
 import PostStatistics from '../models/PostStatistics';
-import { Follow } from '../models/Follow';
+import Follow from '../models/Follow';
 
 export const UserRepository = PostgresDataSource.getRepository(User);
 export const RolesRepository = PostgresDataSource.getRepository(Roles);

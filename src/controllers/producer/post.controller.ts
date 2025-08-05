@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { createPostSchema, createProducerPostSchema, CreateRatingSchema, EmotionSchema, updatePostSchema } from '../../validators/producer/post.validation';
 import { PostService } from '../../services/producer/post.service';
 import { sendApiResponse } from '../../utils/sendApiResponse';
+import { BadRequestError } from '../../errors/badRequest.error';
+import { NotFoundError } from '../../errors/notFound.error';
+import { UserRepository } from '../../repositories';
 
 export const createUserPost = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -159,11 +162,11 @@ export const addCommentToPost = async (req: Request, res: Response, next: NextFu
     }
 };
 
-export const getComments = async (req: Request, res: Response, next: NextFunction) => {
+export const getCommentsByPost = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const postId = Number(req.params.postId);
 
-        const comments = await PostService.getComments(postId);
+        const comments = await PostService.getCommentsByPost(postId);
         return sendApiResponse(res, 200, 'Comments retrieved successfully', comments);
     } catch (error) {
         next(error);
@@ -199,6 +202,16 @@ export const sharePost = async (req: Request, res: Response, next: NextFunction)
     try {
         const userId = req.userId;
         const postId = Number(req.params.postId);
+
+        const user = await UserRepository.findOne({
+            where: { id: userId, isDeleted: false },
+            relations: ['role'],
+        });
+
+        if (!user) throw new NotFoundError('User not found');
+        if (user.role.name !== 'user') {
+            throw new BadRequestError('Only users can share posts');
+        }
 
         const result = await PostService.sharePost(userId, postId);
         return sendApiResponse(res, 200, 'Post shared successfully', result);

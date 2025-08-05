@@ -32,7 +32,7 @@ import PostShare from './PostShare';
 import PostTag from './PostTag';
 import PostEmotion from './PostEmotion';
 import PostRating from './PostRating';
-import { Follow } from './Follow';
+import Follow from './Follow';
 
 @Entity('Users')
 export default class User {

@@ -24,7 +24,7 @@ ProducerPostRouter.put('/updatePostEmotions/:postId', checkPostCreationPermissio
 ProducerPostRouter.post('/saveEmotions/:postId',checkPostCreationPermission , PostController.saveEmotions);
 ProducerPostRouter.post('/togglePostLike/:postId', PostController.togglePostLike);
 ProducerPostRouter.post('/addCommentToPost/:postId', PostController.addCommentToPost);
-ProducerPostRouter.get('/getComments/:postId', PostController.getComments);
+ProducerPostRouter.get('/getCommentsByPost', PostController.getCommentsByPost);
 ProducerPostRouter.delete('/deleteComment/:commentId', PostController.deleteComment);
 ProducerPostRouter.put('/editComment/:commentId', PostController.editComment);
 ProducerPostRouter.post('/sharePost/:postId', PostController.sharePost);

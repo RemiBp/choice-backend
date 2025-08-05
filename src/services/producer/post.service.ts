@@ -13,11 +13,12 @@ import {
     FollowRepository,
     UserRepository,
     NotificationRepository,
+    PostTagRepository,
 } from '../../repositories';
 import { CreatePostInput, CreateProducerPostInput, CreateRatingInput, EmotionSchema } from '../../validators/producer/post.validation';
 import AppDataSource from '../../data-source';
 import z from 'zod';
-import { Follow } from '../../models/Follow';
+import Follow from '../../models/Follow';
 import User from '../../models/User';
 import { RoleName } from '../../enums/Producer.enum';
 import { sendAdminNotification } from '../../utils/sendAdminNotification';
@@ -36,7 +37,7 @@ export const createUserPost = async (userId: number, data: CreatePostInput) => {
         throw new BadRequestError('Cover image must be one of the uploaded images');
     }
 
-    const post = PostRepository.save({
+    const post = await PostRepository.save({
         ...data,
         // producer,
         userId,
@@ -46,6 +47,17 @@ export const createUserPost = async (userId: number, data: CreatePostInput) => {
         commentCount: 0,
         shareCount: 0,
     });
+
+    if (data.tags) {
+        for (const tag of data.tags) {
+            await PostTagRepository.save({
+                postId: post.id,
+                userId: userId,
+                text: tag,
+                isDeleted: false,
+            });
+        }
+    }
 
     if (data.imageUrls?.length) {
         const images = data.imageUrls.map((url) =>
@@ -445,7 +457,7 @@ export const addCommentToPost = async (userId: number, postId: number, comment: 
     };
 };
 
-export const getComments = async (postId: number) => {
+export const getCommentsByPost = async (postId: number) => {
     const comments = await PostCommentRepository.find({
         where: { postId, isDeleted: false },
         relations: ['user'],
