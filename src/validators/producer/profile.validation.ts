@@ -53,6 +53,8 @@ export const updateProfileSchema = z.object({
   facebook: z.string().url().optional(),
   description: z.string({ required_error: 'Description is required' }).trim(),
   profileImageUrl: z.string().optional(),
+  latitude: z.number({ required_error: 'Latitude is required' }),
+  longitude: z.number({ required_error: 'Longitude is required' }),
 });
 
 export type UpdateProfileSchema = z.infer<typeof updateProfileSchema>;

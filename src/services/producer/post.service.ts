@@ -15,14 +15,15 @@ import {
     NotificationRepository,
     PostTagRepository,
 } from '../../repositories';
-import { CreatePostInput, CreateProducerPostInput, CreateRatingInput, EmotionSchema } from '../../validators/producer/post.validation';
+import { CreateEmotionInput, CreatePostInput, CreateProducerPostInput, CreateRatingInput, EmotionSchema } from '../../validators/producer/post.validation';
 import AppDataSource from '../../data-source';
 import z from 'zod';
 import Follow from '../../models/Follow';
 import User from '../../models/User';
-import { RoleName } from '../../enums/Producer.enum';
+import { BusinessRole, RoleName } from '../../enums/Producer.enum';
 import { sendAdminNotification } from '../../utils/sendAdminNotification';
 import { NotificationTypeEnums, PostNotificationCode } from '../../enums/post-notification.enum';
+import { FollowStatusEnums } from '../../enums/followStatus.enum';
 
 export const createUserPost = async (userId: number, data: CreatePostInput) => {
 
@@ -61,12 +62,13 @@ export const createUserPost = async (userId: number, data: CreatePostInput) => {
 
     if (data.imageUrls?.length) {
         const images = data.imageUrls.map((url) =>
-            PostImageRepository.save({
+            PostImageRepository.create({
                 postId: post.id,
                 url,
                 isCoverImage: url === data.coverImage,
             })
         );
+        await PostImageRepository.save(images);
     }
 
     return {
@@ -91,7 +93,7 @@ export const createProducerPost = async (userId: number, roleName: string, data:
         throw new BadRequestError('Cover image must be one of the uploaded images');
     }
 
-    const post = PostRepository.save({
+    const post = await PostRepository.save({
         ...data,
         tags: data.tags ?? [],
         isDeleted: false,
@@ -104,94 +106,137 @@ export const createProducerPost = async (userId: number, roleName: string, data:
 
     if (data.imageUrls?.length) {
         const images = data.imageUrls.map((url) =>
-            PostImageRepository.save({
+            PostImageRepository.create({
                 postId: post.id,
                 url,
                 isCoverImage: url === data.coverImage,
             })
         );
+        await PostImageRepository.save(images);
     }
 
-    return {
-        post: post,
-    };
+    return { post: post };
 };
 
 export const getPostsByProducer = async (userId: number, roleName: string) => {
+    const isValidProducerRole = Object.values(BusinessRole).includes(roleName as BusinessRole);
+    if (!isValidProducerRole) {
+        throw new BadRequestError(`Role '${roleName}' is not allowed to fetch posts.`);
+    }
+
     const producer = await ProducerRepository.findOne({
-        where: { user: { id: userId }, type: roleName },
+        where: {
+            user: { id: userId },
+            type: roleName as BusinessRole,
+        },
     });
 
     if (!producer) {
-        throw new NotFoundError('Producer not found for this role');
+        throw new NotFoundError(`No producer found for user with role '${roleName}'.`);
     }
 
     const posts = await PostRepository.find({
         where: {
             producer: { id: producer.id },
-            type: roleName,
             isDeleted: false,
         },
+        relations: ['images'],
     });
 
-    return { posts };
+    return posts;
 };
+
+// export const getPosts = async (userId: number, roleName: string) => {
+//     if (roleName !== 'user') {
+//         throw new Error('Only user role can fetch followed feed');
+//     }
+
+//     const following = await FollowRepository.find({
+//         where: { followerId: userId },
+//         relations: ['producer', 'followedUser'],
+//     });
+
+//     const followedProducerIds = following
+//         .filter((f: { producer: any; }) => f.producer)
+//         .map((f: { producer: any; }) => f.producer.id);
+
+//     const followedUserIds = following
+//         .filter((f: { followedUser: any; }) => f.followedUser)
+//         .map((f: { followedUser: any; }) => f.followedUser.id);
+
+//     if (followedUserIds.length === 0 && followedProducerIds.length === 0) {
+//         return [];
+//     }
+
+//     const posts = await PostRepository.find({
+//         where: [
+//             ...followedUserIds.map((userId: any) => ({
+//                 userId,
+//                 isDeleted: false,
+//             })),
+//             ...followedProducerIds.map((producerId: any) => ({
+//                 producer: { id: producerId },
+//                 isDeleted: false,
+//             })),
+//         ],
+//         order: { createdAt: 'DESC' },
+//         relations: ['images', 'producer'],
+//     });
+
+//     return posts.map((post: { images: any[]; }) => ({
+//         ...post,
+//         images: post.images.map(img => img.url),
+//     }));
+// };
 
 export const getPosts = async (userId: number, roleName: string) => {
     if (roleName !== 'user') {
         throw new Error('Only user role can fetch followed feed');
     }
 
-    const following = await FollowRepository.find({
-        where: { followerId: userId },
-        relations: ['producer', 'followedUser'],
-    });
+    const posts = await PostRepository.createQueryBuilder('post')
+        .leftJoinAndSelect('post.images', 'images')
+        .leftJoinAndSelect('post.producer', 'producer')
+        .innerJoin(
+            Follow,
+            'follow',
+            `"follow"."followerId" = :userId AND (
+    "post"."userId" = "follow"."followedUserId" OR
+    "post"."producerId" = "follow"."producerId"
+  )`,
+            { userId }
+        )
+        .where('post.isDeleted = false')
+        .orderBy('post.createdAt', 'DESC')
+        .getMany();
 
-    const followedProducerIds = following
-        .filter((f: { producer: any; }) => f.producer)
-        .map((f: { producer: any; }) => f.producer.id);
-
-    const followedUserIds = following
-        .filter((f: { followedUser: any; }) => f.followedUser)
-        .map((f: { followedUser: any; }) => f.followedUser.id);
-
-    if (followedUserIds.length === 0 && followedProducerIds.length === 0) {
-        return [];
-    }
-
-    const posts = await PostRepository.find({
-        where: [
-            ...followedUserIds.map((userId: any) => ({
-                userId,
-                isDeleted: false,
-            })),
-            ...followedProducerIds.map((producerId: any) => ({
-                producer: { id: producerId },
-                isDeleted: false,
-            })),
-        ],
-        order: { createdAt: 'DESC' },
-        relations: ['images', 'producer'],
-    });
-
-    return posts.map((post: { images: any[]; }) => ({
-        ...post,
-        images: post.images.map(img => img.url),
-    }));
+    return posts;
 };
 
-export const getPostById = async (userId: number, postId: number) => {
+export const getUserPostById = async (userId: number, postId: number) => {
     const post = await PostRepository.findOne({
-        where: { id: postId, userId, isDeleted: false },
+        where: { id: postId, userId },
+        relations: ['images'],
+    });
+
+    if (!post) throw new NotFoundError('Post not found or already deleted');
+    return post;
+};
+
+export const getProducerPostById = async (producerId: number, postId: number) => {
+    const post = await PostRepository.findOne({
+        where: {
+            id: postId,
+            isDeleted: false,
+            producer: {
+                id: producerId,
+            },
+        },
         relations: ['images', 'producer'],
     });
 
     if (!post) throw new NotFoundError('Post not found or already deleted');
-
-    return {
-        ...post,
-        images: post.images.map((img: { url: any; }) => img.url),
-    };
+    return post;
 };
 
 export const updatePost = async (userId: number, data: any) => {
@@ -263,7 +308,7 @@ export const saveRatings = async (userId: number, postId: number, data: Omit<Cre
     };
 };
 
-export const saveEmotions = async (userId: number, postId: number, data: z.infer<typeof EmotionSchema>) => {
+export const saveEmotions = async (userId: number, postId: number, data: CreateEmotionInput) => {
     const post = await PostRepository.findOneBy({ id: postId, isDeleted: false });
     if (!post) throw new NotFoundError('Post not found or already deleted');
 
@@ -459,7 +504,7 @@ export const addCommentToPost = async (userId: number, postId: number, comment: 
 
 export const getCommentsByPost = async (postId: number) => {
     const comments = await PostCommentRepository.find({
-        where: { postId, isDeleted: false },
+        where: { postId },
         relations: ['user'],
         order: { createdAt: 'DESC' },
     });
@@ -568,106 +613,175 @@ export const getPostStatistics = async (postId: number) => {
 };
 
 export const toggleFollow = async (userId: number, producerId?: number, followedUserId?: number) => {
-
-    if (!producerId && !followedUserId) {
-        throw new BadRequestError('Must provide either producerId or followedUserId');
-    }
-
-    if (producerId && followedUserId) {
-        throw new BadRequestError('Cannot follow both a user and a producer at once');
-    }
-
     const follower = await UserRepository.findOne({
         where: { id: userId },
         relations: ['role'],
     });
 
-    if (!follower) {
-        throw new NotFoundError('Follower user not found');
-    }
+    if (!follower) throw new NotFoundError('Follower user not found');
 
     if (follower.role.name !== RoleName.USER) {
         throw new BadRequestError('Only users can follow others');
     }
 
+    // FOLLOWING A PRODUCER
     if (producerId) {
         const producer = await ProducerRepository.findOne({
             where: { id: producerId, isDeleted: false },
-            relations: ['user'],
         });
 
         if (!producer) throw new NotFoundError('Producer not found');
-        if (!producer.user) throw new NotFoundError('Linked user not found for this producer');
-        if (userId === producer.user.id) throw new BadRequestError('You cannot follow yourself');
 
-        const existing = await FollowRepository.findOneBy({ followerId: userId, producerId });
-
-        if (existing) {
-            await AppDataSource.manager.transaction(async (manager: { delete: (arg0: typeof Follow, arg1: any) => any; decrement: (arg0: typeof User, arg1: { id: any; }, arg2: string, arg3: number) => any; }) => {
-                await manager.delete(Follow, existing.id);
-                await manager.decrement(User, { id: userId }, 'followingCount', 1);
-                await manager.decrement(User, { id: producer.user.id }, 'followersCount', 1);
-            });
-
-            return {
-                message: 'Unfollowed producer successfully',
-                data: null,
-            };
-        }
-
-        const follow = FollowRepository.create({ followerId: userId, producerId });
-
-        const saved = await AppDataSource.manager.transaction(async (manager: { save: (arg0: any) => any; increment: (arg0: typeof User, arg1: { id: any; }, arg2: string, arg3: number) => any; }) => {
-            const savedFollow = await manager.save(follow);
-            await manager.increment(User, { id: userId }, 'followingCount', 1);
-            await manager.increment(User, { id: producer.user.id }, 'followersCount', 1);
-            return savedFollow;
+        const existing = await FollowRepository.findOneBy({
+            followerId: userId,
+            producerId,
         });
 
-        return {
-            message: 'Followed producer successfully',
-            data: saved,
-        };
-    }
-
-    // 🟦 USER → USER
-    if (followedUserId) {
-        if (userId === followedUserId) throw new BadRequestError('You cannot follow yourself');
-
-        const followedUser = await UserRepository.findOneBy({ id: followedUserId, isDeleted: false });
-        if (!followedUser) throw new NotFoundError('User not found');
-
-        const existing = await FollowRepository.findOneBy({ followerId: userId, followedUserId });
-
         if (existing) {
-            await AppDataSource.manager.transaction(async (manager: { delete: (arg0: typeof Follow, arg1: any) => any; decrement: (arg0: typeof User, arg1: { id: number; }, arg2: string, arg3: number) => any; }) => {
-                await manager.delete(Follow, existing.id);
+            await AppDataSource.manager.transaction(async (manager: { delete: (arg0: any, arg1: any) => any; decrement: (arg0: typeof User, arg1: { id: any; }, arg2: string, arg3: number) => any; }) => {
+                await manager.delete(FollowRepository.target, existing.id);
                 await manager.decrement(User, { id: userId }, 'followingCount', 1);
-                await manager.decrement(User, { id: followedUserId }, 'followersCount', 1);
+
+                // only decrement producer's user followersCount if status was Approved
+                if (existing.status === FollowStatusEnums.Approved && producer.userId) {
+                    await manager.decrement(User, { id: producer.userId }, 'followersCount', 1);
+                }
             });
 
             return {
-                message: 'Unfollowed user successfully',
+                message:
+                    existing.status === FollowStatusEnums.Approved
+                        ? 'Unfollowed producer successfully'
+                        : 'Canceled follow request to producer',
                 data: null,
             };
         }
 
-        const follow = FollowRepository.create({ followerId: userId, followedUserId });
+        // New pending follow request
+        const follow = FollowRepository.create({
+            followerId: userId,
+            producerId,
+            status: FollowStatusEnums.Pending,
+        });
 
         const saved = await AppDataSource.manager.transaction(async (manager: { save: (arg0: any) => any; increment: (arg0: typeof User, arg1: { id: number; }, arg2: string, arg3: number) => any; }) => {
             const savedFollow = await manager.save(follow);
             await manager.increment(User, { id: userId }, 'followingCount', 1);
-            await manager.increment(User, { id: followedUserId }, 'followersCount', 1);
             return savedFollow;
         });
 
         return {
-            message: 'Followed user successfully',
+            message: 'Follow request sent to producer (pending)',
+            data: saved,
+        };
+    }
+
+    // FOLLOWING A USER
+    if (followedUserId) {
+        if (userId === followedUserId) {
+            throw new BadRequestError('You cannot follow yourself');
+        }
+
+        const followedUser = await UserRepository.findOneBy({
+            id: followedUserId,
+            isDeleted: false,
+        });
+
+        if (!followedUser) throw new NotFoundError('User not found');
+
+        const existing = await FollowRepository.findOneBy({
+            followerId: userId,
+            followedUserId,
+        });
+
+        if (existing) {
+            await AppDataSource.manager.transaction(async (manager: { delete: (arg0: any, arg1: any) => any; decrement: (arg0: typeof User, arg1: { id: number; }, arg2: string, arg3: number) => any; }) => {
+                await manager.delete(FollowRepository.target, existing.id);
+                await manager.decrement(User, { id: userId }, 'followingCount', 1);
+
+                // Only decrement followed user's followersCount if status was Approved
+                if (existing.status === FollowStatusEnums.Approved) {
+                    await manager.decrement(User, { id: followedUserId }, 'followersCount', 1);
+                }
+            });
+
+            return {
+                message:
+                    existing.status === FollowStatusEnums.Approved
+                        ? 'Unfollowed user successfully'
+                        : 'Canceled follow request to user',
+                data: null,
+            };
+        }
+
+        // New pending follow request
+        const follow = FollowRepository.create({
+            followerId: userId,
+            followedUserId,
+            status: FollowStatusEnums.Pending,
+        });
+
+        const saved = await AppDataSource.manager.transaction(async (manager: { save: (arg0: any) => any; increment: (arg0: typeof User, arg1: { id: number; }, arg2: string, arg3: number) => any; }) => {
+            const savedFollow = await manager.save(follow);
+            await manager.increment(User, { id: userId }, 'followingCount', 1);
+            return savedFollow;
+        });
+
+        return {
+            message: 'Follow request sent to user (pending)',
             data: saved,
         };
     }
 
     throw new BadRequestError('Invalid follow request');
+};
+
+
+export const approvedRequest = async (userId: number, followId: number) => {
+    const follow = await FollowRepository.findOne({
+        where: { id: followId },
+    });
+
+    if (!follow) {
+        throw new NotFoundError('Follow request not found');
+    }
+
+    if (follow.status === FollowStatusEnums.Approved) {
+        throw new BadRequestError('Request is already approved');
+    }
+
+    if (follow.followedUserId && follow.followedUserId !== userId) {
+        throw new BadRequestError('You are not authorized to approve this request');
+    }
+
+    if (follow.producerId) {
+        const producer = await ProducerRepository.findOneBy({ id: follow.producerId });
+        if (!producer || producer.userId !== userId) {
+            throw new BadRequestError('You are not authorized to approve this request');
+        }
+    }
+
+    follow.status = FollowStatusEnums.Approved;
+
+    await AppDataSource.manager.transaction(async (manager: { save: (arg0: any) => any; increment: (arg0: typeof User, arg1: { id: any; }, arg2: string, arg3: number) => any; }) => {
+        await manager.save(follow);
+
+        if (follow.followedUserId) {
+            await manager.increment(User, { id: follow.followedUserId }, 'followersCount', 1);
+        }
+
+        if (follow.producerId) {
+            const producer = await ProducerRepository.findOneBy({ id: follow.producerId });
+            if (producer?.userId) {
+                await manager.increment(User, { id: producer.userId }, 'followersCount', 1);
+            }
+        }
+    });
+
+    return {
+        message: 'Follow request approved successfully',
+        data: follow,
+    };
 };
 
 export * as PostService from './post.service';

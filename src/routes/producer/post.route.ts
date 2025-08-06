@@ -16,7 +16,8 @@ ProducerPostRouter.post('/createProducerPost', validatePostTypeByRole, PostContr
 ProducerPostRouter.get('/getPostsByProducer', PostController.getPostsByProducer);
 ProducerPostRouter.post('/createUserPost', checkPostCreationPermission, PostController.createUserPost);
 ProducerPostRouter.get('/getUserPosts', PostController.getPosts);
-ProducerPostRouter.get('/getPost/:postId', PostController.getPostById);
+ProducerPostRouter.get('/getUserPostById/:postId', PostController.getUserPostById);
+ProducerPostRouter.get('/getProducerPostById/:postId', PostController.getProducerPostById);
 ProducerPostRouter.put('/updatePost/:postId', PostController.updatePost);
 ProducerPostRouter.delete('/deletePost/:postId', PostController.deletePost);
 ProducerPostRouter.post('/saveRatings/:postId', checkPostCreationPermission, PostController.saveRatings);
@@ -30,5 +31,6 @@ ProducerPostRouter.put('/editComment/:commentId', PostController.editComment);
 ProducerPostRouter.post('/sharePost/:postId', PostController.sharePost);
 ProducerPostRouter.get('/getPostStatistics/:postId', PostController.getPostStatistics);
 ProducerPostRouter.post('/toggleFollowProducer', PostController.toggleFollowProducer);
+ProducerPostRouter.post('/approvedRequest/:followId', PostController.approvedRequest);
 
 export default ProducerPostRouter;

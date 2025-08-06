@@ -57,6 +57,8 @@ export const updateProfile = async (userId: number, updateProfileObject: UpdateP
       facebook,
       description,
       profileImageUrl,
+      latitude,
+      longitude
     } = updateProfileObject;
 
     const user = await UserRepository.findOne({
@@ -81,6 +83,8 @@ export const updateProfile = async (userId: number, updateProfileObject: UpdateP
         facebook,
         description,
         profileImageUrl,
+        latitude,
+        longitude,
         user,
       });
     } else {
@@ -93,6 +97,8 @@ export const updateProfile = async (userId: number, updateProfileObject: UpdateP
       profile.facebook = facebook;
       profile.description = description;
       profile.profileImageUrl = profileImageUrl ?? profile.profileImageUrl;
+      profile.latitude = latitude;
+      profile.longitude = longitude;
     }
 
     user.phoneNumber = phoneNumber;

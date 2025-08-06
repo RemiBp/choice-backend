@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import User from './User';
 import Producer from './Producer';
+import { FollowStatusEnums } from '../enums/followStatus.enum';
 
 @Entity('Follows')
 export default class Follow {
@@ -34,6 +35,13 @@ export default class Follow {
 
   @Column({ nullable: true })
   followedUserId: number;
+
+  @Column({
+    type: 'enum',
+    enum: FollowStatusEnums,
+    default: FollowStatusEnums.Pending,
+  })
+  status: FollowStatusEnums;
 
   @CreateDateColumn()
   createdAt: Date;

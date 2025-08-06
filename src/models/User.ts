@@ -75,6 +75,15 @@ export default class User {
   @Column({ default: 0 })
   followersCount: number;
 
+  @Column({ type: 'float', nullable: true })
+  latitude?: number;
+
+  @Column({ type: 'float', nullable: true })
+  longitude?: number;
+
+  @Column({ nullable: true })
+  bio?: string;
+
   @ManyToOne(() => Roles, (role: Roles) => role.users)
   role: Roles;
 

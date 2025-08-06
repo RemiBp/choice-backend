@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { ProfileController } from '../../controllers/app/profile.controller';
 import { authenticateJWT, checkStatus } from '../../middlewares/auth.middleware';
-import User from '../../models/User';
 
 const UserProfileRouter = Router();
 
@@ -15,6 +14,7 @@ UserProfileRouter.use(checkStatus);
 
 UserProfileRouter.put('/updateProfile', ProfileController.updateProfile);
 UserProfileRouter.get('/getProfile', ProfileController.getProfile);
+
 UserProfileRouter.post('/getPreSignedUrlForProfileImage', ProfileController.getPreSignedUrlForProfileImage);
 UserProfileRouter.post('/changeCurrentPassword', ProfileController.changeCurrentPassword);
 UserProfileRouter.get('/getDeleteReasons', ProfileController.getDeleteReasons);

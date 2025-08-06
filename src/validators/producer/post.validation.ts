@@ -68,7 +68,7 @@ export const createProducerPostSchema = z.object({
   imageUrls: z.array(z.string().url()).max(5, 'Maximum 5 images allowed'),
   coverImage: z.string().url('Invalid cover image URL').optional(),
   publishDate: z.string().datetime('Invalid ISO date format').optional(),
-  
+
   userId: z.number({
     required_error: 'User ID is required',
     invalid_type_error: 'User ID must be a number',
@@ -147,3 +147,26 @@ export const updatePostSchema = z.object({
 });
 
 export type UpdatePostInput = z.infer<typeof updatePostSchema>;
+
+export const toggleFollowSchema = z.object({
+  producerId: z.number().optional(),
+  followedUserId: z.number().optional(),
+}).superRefine((data, ctx) => {
+  if (!data.producerId && !data.followedUserId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Must provide either producerId or followedUserId',
+      path: ['producerId'],
+    });
+  }
+
+  if (data.producerId && data.followedUserId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Cannot follow both a user and a producer at once',
+      path: ['producerId'],
+    });
+  }
+});
+
+export type ToggleFollowInput = z.infer<typeof toggleFollowSchema>;

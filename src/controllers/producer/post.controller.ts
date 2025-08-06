@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { createPostSchema, createProducerPostSchema, CreateRatingSchema, EmotionSchema, updatePostSchema } from '../../validators/producer/post.validation';
+import { createPostSchema, createProducerPostSchema, CreateRatingSchema, EmotionSchema, toggleFollowSchema, updatePostSchema } from '../../validators/producer/post.validation';
 import { PostService } from '../../services/producer/post.service';
 import { sendApiResponse } from '../../utils/sendApiResponse';
 import { BadRequestError } from '../../errors/badRequest.error';
@@ -55,12 +55,24 @@ export const getPosts = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-export const getPostById = async (req: Request, res: Response, next: NextFunction) => {
+export const getUserPostById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
         const postId = Number(req.params.postId);
 
-        const post = await PostService.getPostById(userId, postId);
+        const post = await PostService.getUserPostById(userId, postId);
+        return sendApiResponse(res, 200, 'Post retrieved successfully.', post);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getProducerPostById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        const postId = Number(req.params.postId);
+
+        const post = await PostService.getProducerPostById(userId, postId);
         return sendApiResponse(res, 200, 'Post retrieved successfully.', post);
     } catch (error) {
         next(error);
@@ -237,9 +249,21 @@ export const getPostStatistics = async (req: Request, res: Response, next: NextF
 export const toggleFollowProducer = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
-        const { producerId, followedUserId } = req.body;
 
-        const result = await PostService.toggleFollow(userId, producerId, followedUserId);
+        const parsed = toggleFollowSchema.parse(req.body);
+        const result = await PostService.toggleFollow(userId, parsed.producerId, parsed.followedUserId);
+        return sendApiResponse(res, 200, result.message, result.data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const approvedRequest = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        const followId = Number(req.params.followId);
+
+        const result = await PostService.approvedRequest(userId, followId);
         return sendApiResponse(res, 200, result.message, result.data);
     } catch (error) {
         next(error);
