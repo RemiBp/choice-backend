@@ -14,6 +14,17 @@ import {
     UserRepository,
     NotificationRepository,
     PostTagRepository,
+    RestaurantPostRatingRepository,
+    LeisurePostRatingRepository,
+    WellnessPostRatingRepository,
+    RestaurantRatingRepository,
+    ServiceRatingRepository,
+    EventRatingRepository,
+    EventRepository,
+    LeisureRepository,
+    WellnessRepository,
+    ServiceRatingCriteriaRepository,
+    TagRepository,
 } from '../../repositories';
 import { CreateEmotionInput, CreatePostInput, CreateProducerPostInput, CreateRatingInput, EmotionSchema } from '../../validators/producer/post.validation';
 import AppDataSource from '../../data-source';
@@ -24,23 +35,63 @@ import { BusinessRole, RoleName } from '../../enums/Producer.enum';
 import { sendAdminNotification } from '../../utils/sendAdminNotification';
 import { NotificationTypeEnums, PostNotificationCode } from '../../enums/post-notification.enum';
 import { FollowStatusEnums } from '../../enums/followStatus.enum';
+import { LeisureRatingCriteria, RestaurantRatingCriteria, WellnessRatingCriteria } from '../../enums/rating.enum';
+import { EntityManager, ILike } from 'typeorm';
+import ServiceRating from '../../models/ServiceRatings';
+import ServiceRatingCriteria from '../../models/WellnessServiceTypes';
+import ProducerService from '../../models/Services';
+import WellnessServiceType from '../../models/WellnessServiceTypes';
+
+export const searchProducers = async (query: string, type: string) => {
+    if (
+        type !== BusinessRole.RESTAURANT &&
+        type !== BusinessRole.WELLNESS &&
+        type !== BusinessRole.LEISURE
+    ) {
+        throw new NotFoundError("Invalid type provided");
+    }
+
+    const producers = await ProducerRepository.find({
+        where: {
+            type,
+            name: ILike(`%${query}%`),
+            isDeleted: false,
+            isActive: true,
+        },
+        take: 10,
+    });
+
+    return {
+        results: producers.map((p: { id: any; placeId: any; name: any; address: any; city: any; country: any; }) => ({
+            id: p.id,
+            name: p.name,
+            address: p.address,
+            city: p.city,
+            country: p.country,
+        })),
+    };
+};
 
 export const createUserPost = async (userId: number, data: CreatePostInput) => {
 
-    // const producer = await ProducerRepository.findOneBy({ userId });
-    // if (!producer) throw new NotFoundError('Producer not found for this user');
-
     if (data.imageUrls && data.imageUrls.length > 5) {
-        throw new BadRequestError('You can upload a maximum of 5 images');
+        throw new BadRequestError("You can upload a maximum of 5 images");
     }
 
     if (data.coverImage && !data.imageUrls?.includes(data.coverImage)) {
-        throw new BadRequestError('Cover image must be one of the uploaded images');
+        throw new BadRequestError("Cover image must be one of the uploaded images");
+    }
+
+    const producer = await ProducerRepository.findOne({
+        where: { placeId: data.placeId, isDeleted: false, isActive: true },
+    });
+    if (!producer) {
+        throw new NotFoundError("Producer not found for the given placeId");
     }
 
     const post = await PostRepository.save({
         ...data,
-        // producer,
+        producerId: producer.id,
         userId,
         tags: data.tags ?? [],
         isDeleted: false,
@@ -49,12 +100,19 @@ export const createUserPost = async (userId: number, data: CreatePostInput) => {
         shareCount: 0,
     });
 
-    if (data.tags) {
-        for (const tag of data.tags) {
+    if (data.tags?.length) {
+        for (const tagName of data.tags) {
+            let tag = await TagRepository.findOne({ where: { name: tagName } });
+            if (!tag) {
+                tag = await TagRepository.save(
+                    TagRepository.create({ name: tagName })
+                );
+            }
+
             await PostTagRepository.save({
                 postId: post.id,
-                userId: userId,
-                text: tag,
+                userId,
+                tagId: tag.id,
                 isDeleted: false,
             });
         }
@@ -72,7 +130,8 @@ export const createUserPost = async (userId: number, data: CreatePostInput) => {
     }
 
     return {
-        post: post,
+        message: "Post created successfully",
+        post,
     };
 };
 
@@ -146,49 +205,6 @@ export const getPostsByProducer = async (userId: number, roleName: string) => {
     return posts;
 };
 
-// export const getPosts = async (userId: number, roleName: string) => {
-//     if (roleName !== 'user') {
-//         throw new Error('Only user role can fetch followed feed');
-//     }
-
-//     const following = await FollowRepository.find({
-//         where: { followerId: userId },
-//         relations: ['producer', 'followedUser'],
-//     });
-
-//     const followedProducerIds = following
-//         .filter((f: { producer: any; }) => f.producer)
-//         .map((f: { producer: any; }) => f.producer.id);
-
-//     const followedUserIds = following
-//         .filter((f: { followedUser: any; }) => f.followedUser)
-//         .map((f: { followedUser: any; }) => f.followedUser.id);
-
-//     if (followedUserIds.length === 0 && followedProducerIds.length === 0) {
-//         return [];
-//     }
-
-//     const posts = await PostRepository.find({
-//         where: [
-//             ...followedUserIds.map((userId: any) => ({
-//                 userId,
-//                 isDeleted: false,
-//             })),
-//             ...followedProducerIds.map((producerId: any) => ({
-//                 producer: { id: producerId },
-//                 isDeleted: false,
-//             })),
-//         ],
-//         order: { createdAt: 'DESC' },
-//         relations: ['images', 'producer'],
-//     });
-
-//     return posts.map((post: { images: any[]; }) => ({
-//         ...post,
-//         images: post.images.map(img => img.url),
-//     }));
-// };
-
 export const getPosts = async (userId: number, roleName: string) => {
     if (roleName !== 'user') {
         throw new Error('Only user role can fetch followed feed');
@@ -240,17 +256,38 @@ export const getProducerPostById = async (producerId: number, postId: number) =>
 };
 
 export const updatePost = async (userId: number, data: any) => {
-    const { postId, ...updates } = data;
+    const { postId, tags, ...updates } = data;
 
-    const post = await PostRepository.findOneBy({ id: postId, isDeleted: false });
+    const post = await PostRepository.findOne({
+        where: { id: postId, isDeleted: false },
+        relations: ['producer', 'postTags', 'postTags.tag'],
+    });
     if (!post) throw new NotFoundError('Post not found or already deleted');
 
-    if (post.userId !== userId && post.producerId !== userId) {
-        throw new BadRequestError('You can only update your own posts');
+    if (post.userId && post.userId !== userId) {
+        throw new BadRequestError('You can only update your own user post');
     }
 
     Object.assign(post, updates);
     post.updatedAt = new Date();
+
+    if (tags) {
+        // await PostTagRepository.delete({ postId });
+
+        for (const tagName of tags) {
+            let tag = await TagRepository.findOne({ where: { name: tagName } });
+            if (!tag) {
+                tag = await TagRepository.save(TagRepository.create({ name: tagName }));
+            }
+
+            await PostTagRepository.save({
+                post,
+                userId,
+                tagId: tag.id,
+                isDeleted: false,
+            });
+        }
+    }
 
     return await PostRepository.save(post);
 };
@@ -270,41 +307,257 @@ export const deletePost = async (userId: number, postId: number) => {
     return { post };
 };
 
-export const saveRatings = async (userId: number, postId: number, data: Omit<CreateRatingInput, 'postId'>) => {
-    const { ratings, comment = '' } = data;
+export const saveRatings = async (
+    userId: number,
+    postId: number,
+    data: Omit<CreateRatingInput, "postId">
+) => {
+    const { ratings, comment = "" } = data;
 
-    const post = await PostRepository.findOneBy({ id: postId, isDeleted: false });
-    if (!post) throw new NotFoundError('Post not found or already deleted');
-
-    const existingRatings = await PostRatingRepository.find({
-        where: { userId, postId },
+    const post = await PostRepository.findOne({
+        where: { id: postId, isDeleted: false },
+        relations: ["producer"],
     });
+    if (!post) throw new NotFoundError("Post not found or already deleted");
 
-    const existingCriteria = new Set(existingRatings.map((r: { criteria: any; }) => r.criteria));
-    const duplicates = Object.keys(ratings).filter((c) => existingCriteria.has(c));
-    if (duplicates.length) {
-        throw new BadRequestError(`You have already rated: ${duplicates.join(', ')}`);
+    if (!post.producer) {
+        throw new BadRequestError("This post is not linked to a producer; cannot rate.");
     }
 
-    for (const value of Object.values(ratings)) {
-        if (typeof value !== 'number' || value < 0 || value > 5) {
-            throw new BadRequestError('Ratings must be numbers between 0 and 5');
-        }
+    const type = post.type || post.producer.type;
+    if (!type) throw new BadRequestError("Post type not found");
+
+    let repo: any, globalRepo: any, allowedFields: string[], extraField: Record<string, number> = {};
+
+    switch (type) {
+        case BusinessRole.RESTAURANT:
+            repo = RestaurantPostRatingRepository;
+            globalRepo = RestaurantRatingRepository;
+            allowedFields = Object.values(RestaurantRatingCriteria) as string[];
+            extraField = { restaurantId: post.producer.id };
+            break;
+
+        case BusinessRole.LEISURE:
+            repo = LeisurePostRatingRepository;
+            globalRepo = LeisureRepository;
+            allowedFields = Object.values(LeisureRatingCriteria) as string[];
+            extraField = { leisureId: post.producer.id };
+            break;
+
+        case BusinessRole.WELLNESS:
+            repo = WellnessPostRatingRepository;
+            globalRepo = WellnessRepository;
+            allowedFields = Object.values(WellnessRatingCriteria) as string[];
+            extraField = { wellnessId: post.producer.id };
+            break;
+
+        default:
+            throw new BadRequestError("Invalid post type");
     }
 
-    const ratingEntities = Object.entries(ratings).map(([criteria, value]) =>
-        PostRatingRepository.save({
+    // ✅ Validate criteria keys
+    const invalidKeys = Object.keys(ratings).filter(
+        (key) => !allowedFields.includes(key)
+    );
+    if (invalidKeys.length > 0) {
+        throw new BadRequestError(
+            `Invalid rating criteria for ${type}. Not allowed: ${invalidKeys.join(", ")}`
+        );
+    }
+
+    // ✅ Save or update rating
+    const existing = await repo.findOne({ where: { userId, postId } });
+    let savedRating;
+    if (existing) {
+        Object.assign(existing, { comment, ...ratings });
+        savedRating = await repo.save(existing);
+    } else {
+        savedRating = await repo.save({
             userId,
             postId,
-            criteria,
-            rating: value,
             comment,
-        })
-    );
+            ...ratings,
+            ...extraField,
+        });
+    }
+
+    // ✅ Update global after saving
+    await updateGlobalRating(type, postId, post.producer.id, globalRepo, savedRating);
 
     return {
         postId,
-        count: ratingEntities.length,
+        savedRating,
+        message: "Rating submitted successfully",
+    };
+};
+
+async function updateGlobalRating(
+    type: BusinessRole,
+    postId: number,
+    producerId: number,
+    globalRepo: any,
+    newRating?: any
+) {
+    let postRepo, criteriaFields: string[];
+
+    switch (type) {
+        case BusinessRole.RESTAURANT:
+            postRepo = RestaurantPostRatingRepository;
+            criteriaFields = Object.values(RestaurantRatingCriteria);
+            break;
+
+        case BusinessRole.LEISURE:
+            postRepo = LeisurePostRatingRepository;
+            criteriaFields = Object.values(LeisureRatingCriteria);
+            break;
+
+        case BusinessRole.WELLNESS:
+            postRepo = WellnessPostRatingRepository;
+            criteriaFields = Object.values(WellnessRatingCriteria);
+            break;
+
+        default:
+            return;
+    }
+
+    let ratings = await postRepo.find({ where: { postId } });
+
+    // 👇 Ensure freshly saved rating is included
+    if (newRating && !ratings.find((r: { id: any; }) => r.id === newRating.id)) {
+        ratings.push(newRating);
+    }
+
+    if (!ratings.length) return;
+
+    // ✅ Calculate averages
+    const averages: Record<string, number> = {};
+    criteriaFields.forEach((field) => {
+        averages[field] = parseFloat(
+            (
+                ratings.reduce(
+                    (sum: number, r: any) => sum + (Number(r[field]) || 0),
+                    0
+                ) / ratings.length
+            ).toFixed(1)
+        );
+    });
+
+    const overall = parseFloat(
+        (
+            Object.values(averages).reduce((sum, v) => sum + (v as number), 0) /
+            criteriaFields.length
+        ).toFixed(1)
+    );
+
+    // ✅ Update correct global table
+    await globalRepo
+        .createQueryBuilder()
+        .update()
+        .set({
+            ...averages,
+            overall,
+        })
+        .where("id = :id", { id: producerId })
+        .execute();
+}
+
+export const createServiceRatings = async (input: {
+    userId: number;
+    postId: number;
+    ratings: { serviceTypeId: number; ratings: Record<string, number> }[];
+}) => {
+    const { userId, postId, ratings } = input;
+
+    await AppDataSource.transaction(async (manager: EntityManager) => {
+        for (const r of ratings) {
+            const serviceType = await manager.getRepository(WellnessServiceType).findOne({
+                where: { id: r.serviceTypeId },
+            });
+
+            if (!serviceType) {
+                throw new NotFoundError(`ServiceType ${r.serviceTypeId} not found`);
+            }
+
+            await manager.getRepository(ServiceRating).save({
+                userId,
+                postId,
+                serviceTypeId: r.serviceTypeId,
+                ratings: r.ratings,
+            });
+        }
+    });
+
+    return { message: "Service ratings added successfully." };
+};
+
+export const createEventRatings = async (input: {
+    userId: number;
+    postId: number;
+    eventId: number;
+    ratings: { criteria: string; rating: number }[];
+}) => {
+    const { userId, postId, eventId, ratings } = input;
+
+    const event = await EventRepository.findOne({
+        where: { id: eventId, isDeleted: false },
+        relations: ["eventType"],
+    });
+    if (!event) {
+        throw new NotFoundError("Event not found or already deleted");
+    }
+
+    const post = await PostRepository.findOne({
+        where: { id: postId, isDeleted: false },
+    });
+    if (!post) {
+        throw new NotFoundError("Post not found or already deleted");
+    }
+
+    if (!event.eventType) {
+        throw new BadRequestError("Event type not configured for this event");
+    }
+    const allowedCriteria = new Set(event.eventType.criteria);
+
+    const invalidCriteria = ratings
+        .map(r => r.criteria)
+        .filter(c => !allowedCriteria.has(c));
+
+    if (invalidCriteria.length > 0) {
+        throw new BadRequestError(`Invalid criteria: ${invalidCriteria.join(", ")}`);
+    }
+
+    const existingRatings = await EventRatingRepository.find({
+        where: { userId, postId, eventId },
+    });
+    const existingCriteria = new Set(existingRatings.map((r: { criteria: any; }) => r.criteria));
+
+    const newRatings = ratings.filter(r => !existingCriteria.has(r.criteria));
+    if (newRatings.length === 0) {
+        throw new BadRequestError("You already rated this event with given criteria");
+    }
+
+    const ratingEntities = EventRatingRepository.create(
+        newRatings.map(r => ({
+            userId,
+            postId,
+            eventId,
+            criteria: r.criteria,
+            rating: r.rating,
+        }))
+    );
+    await EventRatingRepository.save(ratingEntities);
+
+    const allRatings = await EventRatingRepository.find({ where: { eventId } });
+    const avg =
+        allRatings.reduce((sum: number, r: { rating: any; }) => sum + Number(r.rating), 0) / allRatings.length;
+
+    post.overallAvgRating = avg;
+    await PostRepository.save(post);
+
+    return {
+        message: "Event ratings added successfully.",
+        ratings: ratingEntities,
+        overallAvgRating: avg,
     };
 };
 
@@ -624,7 +877,6 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
         throw new BadRequestError('Only users can follow others');
     }
 
-    // FOLLOWING A PRODUCER
     if (producerId) {
         const producer = await ProducerRepository.findOne({
             where: { id: producerId, isDeleted: false },
@@ -642,7 +894,6 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
                 await manager.delete(FollowRepository.target, existing.id);
                 await manager.decrement(User, { id: userId }, 'followingCount', 1);
 
-                // only decrement producer's user followersCount if status was Approved
                 if (existing.status === FollowStatusEnums.Approved && producer.userId) {
                     await manager.decrement(User, { id: producer.userId }, 'followersCount', 1);
                 }
@@ -656,8 +907,6 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
                 data: null,
             };
         }
-
-        // New pending follow request
         const follow = FollowRepository.create({
             followerId: userId,
             producerId,
@@ -675,8 +924,6 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
             data: saved,
         };
     }
-
-    // FOLLOWING A USER
     if (followedUserId) {
         if (userId === followedUserId) {
             throw new BadRequestError('You cannot follow yourself');
@@ -699,7 +946,6 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
                 await manager.delete(FollowRepository.target, existing.id);
                 await manager.decrement(User, { id: userId }, 'followingCount', 1);
 
-                // Only decrement followed user's followersCount if status was Approved
                 if (existing.status === FollowStatusEnums.Approved) {
                     await manager.decrement(User, { id: followedUserId }, 'followersCount', 1);
                 }
@@ -714,7 +960,6 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
             };
         }
 
-        // New pending follow request
         const follow = FollowRepository.create({
             followerId: userId,
             followedUserId,

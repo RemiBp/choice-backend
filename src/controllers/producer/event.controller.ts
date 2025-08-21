@@ -3,6 +3,18 @@ import { createEventSchema } from '../../validators/producer/event.validation';
 import { EventService } from '../../services/producer/event.service';
 import { EventStatus } from '../../enums/eventStatus.enum';
 
+export const getEventTypes = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const eventTypes = await EventService.getEventTypes();
+        res.status(200).json({
+            message: "Event types fetched successfully",
+            eventTypes,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const createEvent = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;

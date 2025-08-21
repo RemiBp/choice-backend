@@ -26,13 +26,16 @@ import {
   PaymentMethodsRepository,
   PhotoRepository,
   ProducerRepository,
+  ProducerServiceRepository,
   RestaurantImagesRepository,
   RestaurantPaymentMethodsRepository,
   RestaurantRepository,
   ReviewRepository,
+  ServiceTypeRepository,
   SlotRepository,
   UnavailableSlotRepository,
   UserRepository,
+  WellnessRepository,
 } from '../../repositories';
 import { hashPassword } from '../../utils/PasswordUtils';
 import s3Service from '../s3.service';
@@ -44,74 +47,77 @@ import RestaurantPaymentMethods from '../../models/RestaurantPaymentMethods';
 import { Between, In, MoreThan } from 'typeorm';
 import { getCurrentTimeInUTCFromTimeZone, getTodayDateInTimeZone, toStartOfDay } from '../../utils/getTime';
 import { mapBusinessProfile, mapProducer } from '../../utils/profile.mapper';
+import { BusinessRole } from '../../enums/Producer.enum';
 
-export const updateProfile = async (userId: number, updateProfileObject: UpdateProfileSchema) => {
+export const getAllServiceType = async () => {
+  const serviceTypes = await ServiceTypeRepository.find({
+    order: { name: "ASC" },
+  });
+  return serviceTypes;
+};
+
+export const updateProfile = async (
+  userId: number,
+  updateProfileObject: UpdateProfileSchema
+) => {
   try {
-    const {
-      businessName,
-      address,
-      phoneNumber,
-      website,
-      instagram,
-      twitter,
-      facebook,
-      description,
-      profileImageUrl,
-      latitude,
-      longitude
-    } = updateProfileObject;
-
     const user = await UserRepository.findOne({
       where: { id: userId },
-      relations: ['businessProfile'],
+      relations: ["producer", "businessProfile"],
     });
 
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
-    let profile = user.businessProfile;
-
-    if (!profile) {
-      profile = BusinessProfileRepository.create({
-        businessName,
-        address,
-        phoneNumber,
-        website,
-        instagram,
-        twitter,
-        facebook,
-        description,
-        profileImageUrl,
-        latitude,
-        longitude,
-        user,
-      });
-    } else {
-      profile.businessName = businessName;
-      profile.address = address;
-      profile.phoneNumber = phoneNumber;
-      profile.website = website;
-      profile.instagram = instagram;
-      profile.twitter = twitter;
-      profile.facebook = facebook;
-      profile.description = description;
-      profile.profileImageUrl = profileImageUrl ?? profile.profileImageUrl;
-      profile.latitude = latitude;
-      profile.longitude = longitude;
+    if (!user.producer || !user.businessProfile) {
+      throw new NotFoundError("Profile not initialized for this user");
     }
 
-    user.phoneNumber = phoneNumber;
+    // --------------------
+    // Update Producer Info
+    // --------------------
+    Object.assign(user.producer, {
+      address: updateProfileObject.address,
+      city: updateProfileObject.city,
+      country: updateProfileObject.country,
+      phoneNumber: updateProfileObject.phoneNumber,
+      website: updateProfileObject.website,
+      latitude: updateProfileObject.latitude,
+      longitude: updateProfileObject.longitude,
+    });
 
-    await BusinessProfileRepository.save(profile);
+    // Keep user phoneNumber in sync
+    if (updateProfileObject.phoneNumber) {
+      user.phoneNumber = updateProfileObject.phoneNumber;
+    }
+
+    // --------------------
+    // Update BusinessProfile (socials)
+    // --------------------
+    Object.assign(user.businessProfile, {
+      instagram: updateProfileObject.instagram,
+      twitter: updateProfileObject.twitter,
+      facebook: updateProfileObject.facebook,
+      description: updateProfileObject.description,
+      profileImageUrl: updateProfileObject.profileImageUrl,
+    });
+
+    await ProducerRepository.save(user.producer);
+    await BusinessProfileRepository.save(user.businessProfile);
     await UserRepository.save(user);
 
-    return { message: 'Profile updated successfully' };
+    return {
+      message: "Profile updated successfully",
+      producer: user.producer,
+      businessProfile: user.businessProfile,
+    };
   } catch (error) {
-    console.error('Error in updateProfile', { error });
+    console.error("Error in updateProfile", { error });
     throw error;
   }
 };
+
 
 export const getProfile = async (userId: number) => {
   const user = await UserRepository.findOne({
@@ -332,22 +338,89 @@ export const getMenu = async (userId: number) => {
     throw error;
   }
 };
-export const setServiceType = async (input: SetServiceTypeInput & { userId: number }) => {
-  const { userId, serviceType } = input;
+
+export const setServiceType = async (input: { userId: number; serviceTypeIds: number[] }) => {
+  const { userId, serviceTypeIds } = input;
+
+  const producer = await ProducerRepository.findOne({ where: { userId } });
+  if (!producer) {
+    throw new NotFoundError("Producer not found");
+  }
+
+  if (producer.type !== BusinessRole.WELLNESS) {
+    throw new BadRequestError("Service type can only be added for wellness producers");
+  }
+
+  let wellness = await WellnessRepository.findOne({
+    where: { producerId: producer.id },
+    relations: ["services", "services.serviceType"],
+  });
+
+  if (!wellness) {
+    wellness = WellnessRepository.create({ producerId: producer.id, services: [] });
+    wellness = await WellnessRepository.save(wellness);
+  }
+
+  const existingIds = (wellness.services ?? []).map((s: { serviceTypeId: any; }) => s.serviceTypeId);
+
+  const newServiceIds = serviceTypeIds.filter((id) => !existingIds.includes(id));
+
+  if (newServiceIds.length > 0) {
+    const newServices = newServiceIds.map((id) =>
+      ProducerServiceRepository.create({
+        wellnessId: wellness.id,
+        serviceTypeId: id,
+      })
+    );
+    const saved = await ProducerServiceRepository.save(newServices);
+
+    const reloaded = await ProducerServiceRepository.find({
+      where: { id: In(saved.map((s: { id: any; }) => s.id)) },
+      relations: ["serviceType"],
+    });
+
+    wellness.services.push(...reloaded);
+  }
+
+  return {
+    producerId: producer.id,
+    serviceTypes: (wellness.services ?? []).map((s: { id: any; serviceTypeId: any; serviceType: { name: any; criteria: any; }; }) => ({
+      id: s.id,
+      serviceTypeId: s.serviceTypeId,
+      name: s.serviceType?.name,
+      criteria: s.serviceType?.criteria,
+    })),
+  };
+};
+
+export const getServiceType = async (input: { userId: number }) => {
+  const { userId } = input;
 
   const producer = await ProducerRepository.findOne({
     where: { userId },
   });
 
   if (!producer) {
-    throw new NotFoundError('Producer not found');
+    throw new NotFoundError("Producer not found");
   }
 
-  producer.serviceType = serviceType;
-  await ProducerRepository.save(producer);
+  if (producer.type !== BusinessRole.WELLNESS) {
+    throw new BadRequestError("Only wellness producers have service types");
+  }
+
+  const wellness = await WellnessRepository.findOne({
+    where: { producerId: producer.id },
+    relations: ["services", "services.serviceType"],
+  });
 
   return {
-    message: 'Service type updated successfully.',
+    producerId: producer.id,
+    serviceTypes: (wellness?.services ?? []).map((s: { id: any; serviceTypeId: any; serviceType: { name: any; criteria: any; }; }) => ({
+      id: s.id,
+      serviceTypeId: s.serviceTypeId,
+      name: s.serviceType?.name,
+      criteria: s.serviceType?.criteria,
+    })),
   };
 };
 

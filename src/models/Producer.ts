@@ -17,7 +17,6 @@ import OpeningHours from './OpeningHours';
 import User from './User';
 import { BusinessRole } from '../enums/Producer.enum';
 import { ProducerStatus } from '../enums/producerStatus.enum';
-import { ServiceType } from '../enums/serviceType.enum';
 import Event from './Event';
 import Post from './Post';
 import Follow from './Follow';
@@ -78,13 +77,6 @@ export default class Producer {
         enum: BusinessRole,
     })
     type: BusinessRole;
-
-    @Column({
-        type: 'enum',
-        enum: ServiceType,
-        nullable: true,
-    })
-    serviceType: ServiceType;
 
     @Column({
         type: 'enum',

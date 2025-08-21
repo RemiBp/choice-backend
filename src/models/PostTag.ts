@@ -8,10 +8,14 @@ import {
     ManyToOne,
     JoinColumn,
     Index,
+    Unique,
 } from 'typeorm';
 import User from './User';
+import Post from './Post';
+import Tag from './Tag';
 
 @Entity('PostTags')
+@Unique(['postId', 'tagId'])
 export default class PostTag {
     @PrimaryGeneratedColumn()
     id: number;
@@ -22,16 +26,20 @@ export default class PostTag {
     @Column()
     postId: number;
 
-    @Column()
-    text: string;
+    @Column({ nullable: true })
+    tagId: number;
 
     @ManyToOne(() => User, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'userId' })
     user: User;
 
-    @ManyToOne('Post', 'postTags', { onDelete: 'CASCADE' })
+    @ManyToOne(() => Post, post => post.postTags, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'postId' })
-    post: any;
+    post: Post;
+
+    @ManyToOne(() => Tag, tag => tag.postTags, { onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'tagId' })
+    tag: Tag;
 
     @CreateDateColumn({ type: 'timestamptz' })
     createdAt: Date;

@@ -4,6 +4,7 @@ import ProducerProfileRouter from './profile.router';
 import ProducerBookingRouter from './booking.route';
 import ProducerEventRouter from './event.router';
 import ProducerPostRouter from './post.route';
+import ProducerMapRouter from './maps.routes';
 
 const ProducerRouter = Router();
 
@@ -16,5 +17,6 @@ ProducerRouter.use('/profile', ProducerProfileRouter);
 ProducerRouter.use('/event', ProducerEventRouter);
 ProducerRouter.use('/booking', ProducerBookingRouter);
 ProducerRouter.use('/post', ProducerPostRouter);
+ProducerRouter.use('/maps', ProducerMapRouter);
 
 export default ProducerRouter;

@@ -55,6 +55,8 @@ export const updateProfileSchema = z.object({
   profileImageUrl: z.string().optional(),
   latitude: z.number({ required_error: 'Latitude is required' }),
   longitude: z.number({ required_error: 'Longitude is required' }),
+  city: z.string().optional(),
+  country: z.string().optional(),
 });
 
 export type UpdateProfileSchema = z.infer<typeof updateProfileSchema>;
@@ -110,7 +112,7 @@ export const setCapacitySchema = z.object({
 export type SetCapacitySchema = z.infer<typeof setCapacitySchema>;
 
 export const setServiceTypeSchema = z.object({
-  serviceType: z.enum(Object.values(ServiceType) as [string, ...string[]]),
+  serviceTypeIds: z.array(z.number().int().positive()).min(1, "At least one service type is required"),
 });
 
 export type SetServiceTypeInput = z.infer<typeof setServiceTypeSchema>;

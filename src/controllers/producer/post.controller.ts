@@ -6,6 +6,22 @@ import { BadRequestError } from '../../errors/badRequest.error';
 import { NotFoundError } from '../../errors/notFound.error';
 import { UserRepository } from '../../repositories';
 
+export const getProducerPlaces = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { query, type } = req.query;
+
+        if (!query || !type) {
+            return res.status(400).json({ message: "Query and type are required" });
+        }
+
+        const results = await PostService.searchProducers(query.toString(), type.toString());
+        return sendApiResponse(res, 200, 'places fetched successfully.', results);
+    } catch (error) {
+        next(error);
+    }
+};
+
+
 export const createUserPost = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
@@ -81,7 +97,7 @@ export const getProducerPostById = async (req: Request, res: Response, next: Nex
 
 export const updatePost = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const postId = req.params.id;
+        const postId = Number(req.params.id);
         const userId = req.userId;
 
         const parsed = updatePostSchema.safeParse({ ...req.body, postId });
@@ -110,8 +126,48 @@ export const saveRatings = async (req: Request, res: Response, next: NextFunctio
         const postId = Number(req.params.postId);
 
         const parsed = CreateRatingSchema.parse(req.body);
+
         const result = await PostService.saveRatings(userId, postId, parsed);
-        return sendApiResponse(res, 200, 'Rating submitted successfully.', result);
+
+        return sendApiResponse(res, 200, "Rating submitted successfully.", result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const createServiceRatings = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        const postId = Number(req.params.postId);
+        const { ratings } = req.body;
+
+        const result = await PostService.createServiceRatings({
+            userId: Number(userId),
+            postId,
+            ratings,
+        });
+
+        res.status(201).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const createEventRatings = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        const postId = Number(req.params.postId);
+
+        const { eventId, ratings } = req.body;
+
+        const result = await PostService.createEventRatings({
+            userId,
+            postId,
+            eventId: Number(eventId),
+            ratings,
+        });
+
+        res.status(201).json(result);
     } catch (err) {
         next(err);
     }

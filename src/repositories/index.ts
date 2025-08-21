@@ -30,12 +30,26 @@ import Post from '../models/Post';
 import PostRating from '../models/PostRating';
 import PostImage from '../models/PostImage';
 import PostTag from '../models/PostTag';
+import Tag from '../models/Tag';
 import PostEmotion from '../models/PostEmotion';
 import PostLike from '../models/PostLike';
 import PostComment from '../models/PostComment';
 import PostShare from '../models/PostShare';
 import PostStatistics from '../models/PostStatistics';
 import Follow from '../models/Follow';
+
+import Leisure from '../models/Leisure';
+import Wellness from '../models/Wellness';
+import RestaurantRating from '../models/RestaurantRating';
+import LeisurePostRating from '../models/LeisurePostRating';
+import WellnessPostRating from '../models/WellnessPostRating';
+import RestaurantPostRating from '../models/RestaurantPostRating';
+import ProducerServiceType from '../models/Services';
+import ServiceRating from '../models/ServiceRatings';
+import ServiceRatingCriteria from '../models/WellnessServiceTypes'
+import EventRating from '../models/EventRating';
+import EventType from '../models/EventTypes';
+import WellnessServiceType from '../models/WellnessServiceTypes';
 
 export const UserRepository = PostgresDataSource.getRepository(User);
 export const RolesRepository = PostgresDataSource.getRepository(Roles);
@@ -67,6 +81,7 @@ export const EventBookingRepository = PostgresDataSource.getRepository(EventBook
 export const PostRepository = PostgresDataSource.getRepository(Post);
 export const PostRatingRepository = PostgresDataSource.getRepository(PostRating);
 export const PostImageRepository = PostgresDataSource.getRepository(PostImage);
+export const TagRepository = PostgresDataSource.getRepository(Tag)
 export const PostTagRepository = PostgresDataSource.getRepository(PostTag);
 export const PostEmotionRepository = PostgresDataSource.getRepository(PostEmotion);
 export const PostLikeRepository = PostgresDataSource.getRepository(PostLike);
@@ -74,3 +89,16 @@ export const PostCommentRepository = PostgresDataSource.getRepository(PostCommen
 export const PostShareRepository = PostgresDataSource.getRepository(PostShare);
 export const PostStatisticsRepository = PostgresDataSource.getRepository(PostStatistics);
 export const FollowRepository = PostgresDataSource.getRepository(Follow);
+export const ProducerServiceRepository = PostgresDataSource.getRepository(ProducerServiceType);
+export const ServiceRatingRepository = PostgresDataSource.getRepository(ServiceRating);
+export const ServiceRatingCriteriaRepository = PostgresDataSource.getRepository(ServiceRatingCriteria);
+export const EventRatingRepository = PostgresDataSource.getRepository(EventRating);
+export const EventTypeRepository = PostgresDataSource.getRepository(EventType);
+export const ServiceTypeRepository = PostgresDataSource.getRepository(WellnessServiceType);
+
+export const LeisureRepository = PostgresDataSource.getRepository(Leisure);
+export const WellnessRepository = PostgresDataSource.getRepository(Wellness);
+export const RestaurantRatingRepository = PostgresDataSource.getRepository(RestaurantRating);
+export const LeisurePostRatingRepository = PostgresDataSource.getRepository(LeisurePostRating);
+export const WellnessPostRatingRepository = PostgresDataSource.getRepository(WellnessPostRating);
+export const RestaurantPostRatingRepository = PostgresDataSource.getRepository(RestaurantPostRating);

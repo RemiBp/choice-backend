@@ -33,6 +33,8 @@ import PostTag from './PostTag';
 import PostEmotion from './PostEmotion';
 import PostRating from './PostRating';
 import Follow from './Follow';
+import ServiceRating from './ServiceRatings';
+import EventRating from './EventRating';
 
 @Entity('Users')
 export default class User {
@@ -86,6 +88,12 @@ export default class User {
 
   @ManyToOne(() => Roles, (role: Roles) => role.users)
   role: Roles;
+
+  @OneToMany(() => ServiceRating, rating => rating.user)
+  serviceRatings: ServiceRating[];
+
+  @OneToMany(() => EventRating, rating => rating.user)
+  eventRatings: EventRating[];
 
   @OneToOne(() => Password, password => password.user, { cascade: true })
   Password: Password;

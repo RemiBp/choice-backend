@@ -6,19 +6,19 @@ export enum RestaurantRatingCriteria {
 }
 
 export enum LeisureRatingCriteria {
-    STAGE_DIRECTION = 'stage_direction',
-    ACTOR_PERFORMANCE = 'actor_performance',
-    TEXT_QUALITY = 'text_quality',
+    STAGE_DIRECTION = 'stageDirection',
+    ACTOR_PERFORMANCE = 'actorPerformance',
+    TEXT_QUALITY = 'textQuality',
     SCENOGRAPHY = 'scenography',
 }
 
 export enum WellnessRatingCriteria {
-    CARE_QUALITY = 'care_quality',
+    CARE_QUALITY = 'careQuality',
     CLEANLINESS = 'cleanliness',
     WELCOME = 'welcome',
-    VALUE_FOR_MONEY = 'value_for_money',
+    VALUE_FOR_MONEY = 'valueForMoney',
     ATMOSPHERE = 'atmosphere',
-    STAFF_EXPERTISE = 'staff_expertise',
+    STAFF_EXPERTISE = 'staffExperience',
 }
 
 export type RatingCriteria = RestaurantRatingCriteria | LeisureRatingCriteria | WellnessRatingCriteria;

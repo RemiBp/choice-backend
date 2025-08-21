@@ -6,10 +6,14 @@ import {
     JoinColumn,
     CreateDateColumn,
     UpdateDateColumn,
+    OneToMany,
 } from 'typeorm';
 import Producer from './Producer';
 import { EventStatus } from '../enums/eventStatus.enum';
 import { ServiceType } from '../enums/serviceType.enum';
+import EventRating from './EventRating';
+import Leisure from './Leisure';
+import EventType from './EventTypes';
 
 @Entity('Events')
 export default class Event {
@@ -51,6 +55,23 @@ export default class Event {
 
     @Column({ nullable: true, unique: true })
     slug: string;
+
+    @OneToMany(() => EventRating, rating => rating.event, { cascade: true })
+    ratings: EventRating[];
+
+    @ManyToOne(() => Leisure, leisure => leisure.events, { onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'leisureId' })
+    leisure: Leisure;
+
+    @Column()
+    leisureId: number;
+
+    @ManyToOne(() => EventType, type => type.events, { onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'eventTypeId' })
+    eventType: EventType;
+
+    @Column({ nullable: true })
+    eventTypeId: number;
 
     @ManyToOne(() => Producer, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'producerId' })
