@@ -2,45 +2,91 @@ import {
   ProducerRepository,
   WellnessRepository,
   ProducerServiceRepository,
-  ServiceTypeRepository,
+  WellnessServiceRepository,
+  WellnessServiceTypeRepository,
 } from '../../repositories';
 import { BadRequestError } from '../../errors/badRequest.error';
 import { NotFoundError } from '../../errors/notFound.error';
 import { CreateServiceInput } from '../../validators/producer/service.validation';
+import { BusinessRole } from '../../enums/Producer.enum';
 
-export const getServiceTypes = async () => {
-  const serviceTypes = await ServiceTypeRepository.find({
-    order: { name: "ASC" },
-  });
-  return serviceTypes;
-};
-
-export const createService = async (userId: number, data: CreateServiceInput) => {
+export const getServiceTypes = async (input: { userId: number }) => {
+  const { userId } = input;
 
   const producer = await ProducerRepository.findOne({ where: { userId } });
   if (!producer) throw new NotFoundError("Producer not found");
 
-  if (producer.type !== "wellness") {
+  if (producer.type !== BusinessRole.WELLNESS) {
+    throw new BadRequestError("Only wellness producers have service types");
+  }
+
+  const wellness = await WellnessRepository.findOne({
+    where: { producerId: producer.id },
+    relations: ["selectedServices", "selectedServices.serviceType"],
+  });
+
+  if (!wellness) {
+    return {
+      producerId: producer.id,
+      serviceTypes: [],
+    };
+  }
+
+  return {
+    producerId: producer.id,
+    serviceTypes: (wellness.selectedServices ?? []).map((s: { serviceType: { id: any; name: any; criteria: any; }; }) => ({
+      id: s.serviceType.id,
+      name: s.serviceType.name,
+      criteria: s.serviceType.criteria,
+    })),
+  };
+};
+
+export const createService = async (userId: number, data: CreateServiceInput) => {
+  const producer = await ProducerRepository.findOne({ where: { userId } });
+  if (!producer) throw new NotFoundError("Producer not found");
+
+  if (producer.type !== BusinessRole.WELLNESS) {
     throw new BadRequestError("Only wellness producers can create services");
   }
 
   const wellness = await WellnessRepository.findOne({
     where: { producerId: producer.id },
+    relations: ["selectedServices", "selectedServices.serviceType"],
   });
   if (!wellness) throw new NotFoundError("Wellness record not found for this producer");
 
   if (!data.serviceTypeId) throw new BadRequestError("Service type is required");
 
-  const serviceType = await ServiceTypeRepository.findOne({
-    where: { id: data.serviceTypeId },
+  const selectedService = wellness.selectedServices.find(
+    (s: { serviceType: { id: number; }; }) => s.serviceType.id === data.serviceTypeId
+  );
+  if (!selectedService) {
+    throw new BadRequestError("This service type was not selected during profile setup");
+  }
+
+  const exists = await ProducerServiceRepository.findOne({
+    where: { wellnessId: wellness.id, serviceTypeId: data.serviceTypeId, isDeleted: false },
   });
-  if (!serviceType) throw new NotFoundError("Invalid Service Type provided");
+  if (exists) {
+    throw new BadRequestError("This service type already exists for your profile");
+  }
+
+  // ✅ Prevent duplicate slug (if provided)
+  if (data.slug) {
+    const slugExists = await ProducerServiceRepository.findOne({
+      where: { slug: data.slug, isDeleted: false },
+    });
+    if (slugExists) {
+      throw new BadRequestError("Slug already exists, please choose another");
+    }
+  }
 
   const newService = await ProducerServiceRepository.save({
     ...data,
     producerId: producer.id,
     wellnessId: wellness.id,
-    serviceTypeId: serviceType.id,
+    serviceTypeId: data.serviceTypeId,
     isActive: true,
     isDeleted: false,
   });
@@ -51,7 +97,7 @@ export const createService = async (userId: number, data: CreateServiceInput) =>
   };
 };
 
-export const getAllServices = async (userId: number, isActive?: boolean) => {
+export const getAllServices = async (userId: number) => {
   const producer = await ProducerRepository.findOne({ where: { userId } });
   if (!producer) throw new NotFoundError("Producer not found");
 
@@ -63,10 +109,8 @@ export const getAllServices = async (userId: number, isActive?: boolean) => {
   const services = await ProducerServiceRepository.find({
     where: {
       wellnessId: wellness.id,
-      isDeleted: false,
-      ...(isActive !== undefined ? { isActive } : {}),
     },
-    relations: ["serviceType", "wellness"],
+    relations: ["serviceType"],
   });
 
   return services;

@@ -44,11 +44,12 @@ import RestaurantRating from '../models/RestaurantRating';
 import LeisurePostRating from '../models/LeisurePostRating';
 import WellnessPostRating from '../models/WellnessPostRating';
 import RestaurantPostRating from '../models/RestaurantPostRating';
-import ProducerServiceType from '../models/Services';
+import ProducerService from '../models/Services';
 import ServiceRating from '../models/ServiceRatings';
 import EventRating from '../models/EventRating';
 import EventType from '../models/EventTypes';
 import WellnessServiceType from '../models/WellnessServiceTypes';
+import WellnessService from '../models/WellnessServices';
 
 export const UserRepository = PostgresDataSource.getRepository(User);
 export const RolesRepository = PostgresDataSource.getRepository(Roles);
@@ -88,11 +89,12 @@ export const PostCommentRepository = PostgresDataSource.getRepository(PostCommen
 export const PostShareRepository = PostgresDataSource.getRepository(PostShare);
 export const PostStatisticsRepository = PostgresDataSource.getRepository(PostStatistics);
 export const FollowRepository = PostgresDataSource.getRepository(Follow);
-export const ProducerServiceRepository = PostgresDataSource.getRepository(ProducerServiceType);
+export const ProducerServiceRepository = PostgresDataSource.getRepository(ProducerService);
 export const ServiceRatingRepository = PostgresDataSource.getRepository(ServiceRating);
 export const EventRatingRepository = PostgresDataSource.getRepository(EventRating);
 export const EventTypeRepository = PostgresDataSource.getRepository(EventType);
-export const ServiceTypeRepository = PostgresDataSource.getRepository(WellnessServiceType);
+export const WellnessServiceTypeRepository = PostgresDataSource.getRepository(WellnessServiceType);
+export const WellnessServiceRepository = PostgresDataSource.getRepository(WellnessService);
 
 export const LeisureRepository = PostgresDataSource.getRepository(Leisure);
 export const WellnessRepository = PostgresDataSource.getRepository(Wellness);

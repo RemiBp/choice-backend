@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import Producer from "./Producer";
 import ProducerService from "./Services";
+import WellnessService from "./WellnessServices";
 
 @Entity('Wellness')
 @Index('IDX_Wellness_producerId', ['producerId'], { unique: true })
@@ -59,8 +60,11 @@ export default class Wellness {
     @Column('decimal', { precision: 2, scale: 1, default: 0.0 })
     ai_overall: number;
 
-    @OneToMany(() => ProducerService, service => service.wellness, { cascade: true })
-    services: ProducerService[];
+    @OneToMany(() => ProducerService, (service) => service.wellness, { cascade: true })
+    producerServices: ProducerService[];
+
+    @OneToMany(() => WellnessService, (ws) => ws.wellness)
+    selectedServices: WellnessService[];
 
     @CreateDateColumn()
     createdAt: Date;

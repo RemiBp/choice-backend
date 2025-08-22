@@ -31,11 +31,12 @@ import {
   RestaurantPaymentMethodsRepository,
   RestaurantRepository,
   ReviewRepository,
-  ServiceTypeRepository,
+  WellnessServiceRepository,
   SlotRepository,
   UnavailableSlotRepository,
   UserRepository,
   WellnessRepository,
+  WellnessServiceTypeRepository,
 } from '../../repositories';
 import { hashPassword } from '../../utils/PasswordUtils';
 import s3Service from '../s3.service';
@@ -50,7 +51,7 @@ import { mapBusinessProfile, mapProducer } from '../../utils/profile.mapper';
 import { BusinessRole } from '../../enums/Producer.enum';
 
 export const getAllServiceType = async () => {
-  const serviceTypes = await ServiceTypeRepository.find({
+  const serviceTypes = await WellnessServiceTypeRepository.find({
     order: { name: "ASC" },
   });
   return serviceTypes;
@@ -343,9 +344,7 @@ export const setServiceType = async (input: { userId: number; serviceTypeIds: nu
   const { userId, serviceTypeIds } = input;
 
   const producer = await ProducerRepository.findOne({ where: { userId } });
-  if (!producer) {
-    throw new NotFoundError("Producer not found");
-  }
+  if (!producer) throw new NotFoundError("Producer not found");
 
   if (producer.type !== BusinessRole.WELLNESS) {
     throw new BadRequestError("Service type can only be added for wellness producers");
@@ -353,42 +352,50 @@ export const setServiceType = async (input: { userId: number; serviceTypeIds: nu
 
   let wellness = await WellnessRepository.findOne({
     where: { producerId: producer.id },
-    relations: ["services", "services.serviceType"],
+    relations: ["selectedServices", "selectedServices.serviceType"],
   });
 
   if (!wellness) {
-    wellness = WellnessRepository.create({ producerId: producer.id, services: [] });
+    wellness = WellnessRepository.create({ producerId: producer.id });
     wellness = await WellnessRepository.save(wellness);
   }
 
-  const existingIds = (wellness.services ?? []).map((s: { serviceTypeId: any; }) => s.serviceTypeId);
+  const existingIds = (wellness.selectedServices ?? []).map((s: { serviceType: { id: any; }; }) => s.serviceType.id);
 
   const newServiceIds = serviceTypeIds.filter((id) => !existingIds.includes(id));
 
   if (newServiceIds.length > 0) {
-    const newServices = newServiceIds.map((id) =>
-      ProducerServiceRepository.create({
-        wellnessId: wellness.id,
-        serviceTypeId: id,
+    const newServices = await Promise.all(
+      newServiceIds.map(async (id) => {
+        const serviceType = await WellnessServiceTypeRepository.findOne({ where: { id } });
+        if (!serviceType) throw new NotFoundError(`ServiceType ${id} not found`);
+
+        return WellnessServiceRepository.create({
+          wellness,
+          serviceType,
+        });
       })
     );
-    const saved = await ProducerServiceRepository.save(newServices);
 
-    const reloaded = await ProducerServiceRepository.find({
+    const saved = await WellnessServiceRepository.save(newServices);
+
+    // Add to wellness.selectedServices so return is updated
+    const reloaded = await WellnessServiceRepository.find({
       where: { id: In(saved.map((s: { id: any; }) => s.id)) },
       relations: ["serviceType"],
     });
 
-    wellness.services.push(...reloaded);
+    wellness.selectedServices.push(...reloaded);
   }
 
+  // 5. Return updated services
   return {
     producerId: producer.id,
-    serviceTypes: (wellness.services ?? []).map((s: { id: any; serviceTypeId: any; serviceType: { name: any; criteria: any; }; }) => ({
+    serviceTypes: (wellness.selectedServices ?? []).map((s: { id: any; serviceType: { id: any; name: any; criteria: any; }; }) => ({
       id: s.id,
-      serviceTypeId: s.serviceTypeId,
-      name: s.serviceType?.name,
-      criteria: s.serviceType?.criteria,
+      serviceTypeId: s.serviceType.id,
+      name: s.serviceType.name,
+      criteria: s.serviceType.criteria,
     })),
   };
 };
@@ -396,13 +403,8 @@ export const setServiceType = async (input: { userId: number; serviceTypeIds: nu
 export const getServiceType = async (input: { userId: number }) => {
   const { userId } = input;
 
-  const producer = await ProducerRepository.findOne({
-    where: { userId },
-  });
-
-  if (!producer) {
-    throw new NotFoundError("Producer not found");
-  }
+  const producer = await ProducerRepository.findOne({ where: { userId } });
+  if (!producer) throw new NotFoundError("Producer not found");
 
   if (producer.type !== BusinessRole.WELLNESS) {
     throw new BadRequestError("Only wellness producers have service types");
@@ -410,16 +412,16 @@ export const getServiceType = async (input: { userId: number }) => {
 
   const wellness = await WellnessRepository.findOne({
     where: { producerId: producer.id },
-    relations: ["services", "services.serviceType"],
+    relations: ["selectedServices", "selectedServices.serviceType"],
   });
 
   return {
     producerId: producer.id,
-    serviceTypes: (wellness?.services ?? []).map((s: { id: any; serviceTypeId: any; serviceType: { name: any; criteria: any; }; }) => ({
+    serviceTypes: (wellness?.selectedServices ?? []).map((s: { id: any; serviceType: { id: any; name: any; criteria: any; }; }) => ({
       id: s.id,
-      serviceTypeId: s.serviceTypeId,
-      name: s.serviceType?.name,
-      criteria: s.serviceType?.criteria,
+      serviceTypeId: s.serviceType.id,
+      name: s.serviceType.name,
+      criteria: s.serviceType.criteria,
     })),
   };
 };

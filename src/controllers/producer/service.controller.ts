@@ -4,10 +4,12 @@ import { createServiceSchema } from "../../validators/producer/service.validatio
 
 export const getServiceTypes = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const serviceTypes = await ServiceService.getServiceTypes();
+    const userId = req.userId;
+    const result = await ServiceService.getServiceTypes({ userId: Number(userId) });
+
     res.status(200).json({
-      message: "Service types fetched successfully",
-      serviceTypes,
+      message: "Selected service types fetched successfully",
+      ...result,
     });
   } catch (error) {
     next(error);
@@ -32,13 +34,7 @@ export const createService = async (req: Request, res: Response, next: NextFunct
 export const getAllServices = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;
-    if (!userId) throw new Error("userId is required");
-
-    const isActive = req.query.isActive
-      ? req.query.isActive === "true"
-      : undefined;
-
-    const services = await ServiceService.getAllServices(userId, isActive);
+    const services = await ServiceService.getAllServices(userId);
 
     res.status(200).json(services);
   } catch (error) {

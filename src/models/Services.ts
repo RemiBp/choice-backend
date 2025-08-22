@@ -45,7 +45,7 @@ export default class ProducerService {
   @OneToMany(() => ServiceRating, (rating) => rating.producerService, { cascade: true })
   ratings: ServiceRating[];
 
-  @ManyToOne(() => Wellness, (wellness) => wellness.services, { onDelete: "CASCADE" })
+  @ManyToOne(() => Wellness, (wellness) => wellness.producerServices, { onDelete: "CASCADE" })
   @JoinColumn({ name: "wellnessId" })
   wellness: Wellness;
 
