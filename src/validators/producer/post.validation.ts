@@ -6,7 +6,6 @@ import {
   WellnessRatingCriteria,
 } from '../../enums/rating.enum';
 
-
 export const createPostSchema = z.object({
   type: z.nativeEnum(PostType, {
     required_error: "Post type is required",
@@ -45,7 +44,10 @@ export const createPostSchema = z.object({
     .int("User ID must be an integer")
     .positive("User ID must be positive"),
 
-  producerId: z.number().optional(),
+  placeId: z.number({
+    required_error: "Place ID is required",
+    invalid_type_error: "PLace ID must be a number",
+  }),
 
   publishDate: z.string()
     .datetime("Invalid ISO 8601 date format (e.g., 2023-01-01T00:00:00Z)")
@@ -68,7 +70,7 @@ export const createProducerPostSchema = z.object({
   imageUrls: z.array(z.string().url()).max(5, 'Maximum 5 images allowed'),
   coverImage: z.string().url('Invalid cover image URL').optional(),
   publishDate: z.string().datetime('Invalid ISO date format').optional(),
-  
+
   userId: z.number({
     required_error: 'User ID is required',
     invalid_type_error: 'User ID must be a number',
@@ -100,9 +102,9 @@ export const LeisureRatingSchema = z.object({
   producerType: z.literal('leisure'),
   comment: z.string().optional(),
   ratings: z.object({
-    stage_direction: z.number().min(0).max(5),
-    actor_performance: z.number().min(0).max(5),
-    text_quality: z.number().min(0).max(5),
+    stageDirection: z.number().min(0).max(5),
+    actorPerformance: z.number().min(0).max(5),
+    textQuality: z.number().min(0).max(5),
     scenography: z.number().min(0).max(5),
   }),
 });
@@ -111,12 +113,12 @@ export const WellnessRatingSchema = z.object({
   producerType: z.literal('wellness'),
   comment: z.string().optional(),
   ratings: z.object({
-    care_quality: z.number().min(0).max(5),
+    careQuality: z.number().min(0).max(5),
     cleanliness: z.number().min(0).max(5),
     welcome: z.number().min(0).max(5),
-    value_for_money: z.number().min(0).max(5),
+    valueForMoney: z.number().min(0).max(5),
     atmosphere: z.number().min(0).max(5),
-    staff_expertise: z.number().min(0).max(5),
+    staffExperience: z.number().min(0).max(5),
   }),
 });
 
@@ -147,3 +149,26 @@ export const updatePostSchema = z.object({
 });
 
 export type UpdatePostInput = z.infer<typeof updatePostSchema>;
+
+export const toggleFollowSchema = z.object({
+  producerId: z.number().optional(),
+  followedUserId: z.number().optional(),
+}).superRefine((data, ctx) => {
+  if (!data.producerId && !data.followedUserId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Must provide either producerId or followedUserId',
+      path: ['producerId'],
+    });
+  }
+
+  if (data.producerId && data.followedUserId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Cannot follow both a user and a producer at once',
+      path: ['producerId'],
+    });
+  }
+});
+
+export type ToggleFollowInput = z.infer<typeof toggleFollowSchema>;

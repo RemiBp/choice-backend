@@ -14,6 +14,8 @@ import {
 import User from './User';
 import Producer from './Producer';
 import { PostType, PostStatus } from '../enums/post.enum';
+import ServiceRating from './ServiceRatings';
+import EventRating from './EventRating';
 
 @Entity('Posts')
 export default class Post {
@@ -45,9 +47,6 @@ export default class Post {
     @Column({ nullable: true })
     link: string;
 
-    @Column('text', { array: true, default: '{}' })
-    tags: string[];
-
     @Column({ default: 0 })
     likesCount: number;
 
@@ -65,6 +64,12 @@ export default class Post {
 
     @Column({ nullable: true })
     producerId: number;
+
+    @OneToMany(() => ServiceRating, rating => rating.post)
+    serviceRatings: ServiceRating[];
+
+    @OneToMany(() => EventRating, rating => rating.post)
+    eventRatings: EventRating[];
 
     @ManyToOne(() => User, { nullable: true, onDelete: 'CASCADE' })
     @JoinColumn({ name: 'userId' })

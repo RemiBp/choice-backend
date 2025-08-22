@@ -1,15 +1,16 @@
 import { Router } from 'express';
 import { EventController } from '../../controllers/producer/event.controller';
-import { authenticateJWTForRestaurant, checkStatus } from '../../middlewares/restaurant.auth.middleware';
+import { authenticateJWT, checkStatus } from '../../middlewares/auth.middleware';
 
 const ProducerEventRouter = Router();
 ProducerEventRouter.get('/', (req, res) => {
     res.send('Hit Event route');
 });
 
-ProducerEventRouter.use(authenticateJWTForRestaurant);
+ProducerEventRouter.use(authenticateJWT);
 ProducerEventRouter.use(checkStatus);
 
+ProducerEventRouter.get('/getEventTypes', EventController.getEventTypes);
 ProducerEventRouter.post('/createEvent', EventController.createEvent);
 ProducerEventRouter.get('/getAllEvents', EventController.getAllEvents);
 ProducerEventRouter.get('/getEventById/:eventId', EventController.getEventById);

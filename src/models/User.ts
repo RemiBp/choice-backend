@@ -33,6 +33,8 @@ import PostTag from './PostTag';
 import PostEmotion from './PostEmotion';
 import PostRating from './PostRating';
 import Follow from './Follow';
+import ServiceRating from './ServiceRatings';
+import EventRating from './EventRating';
 
 @Entity('Users')
 export default class User {
@@ -75,8 +77,23 @@ export default class User {
   @Column({ default: 0 })
   followersCount: number;
 
+  @Column({ type: 'float', nullable: true })
+  latitude?: number;
+
+  @Column({ type: 'float', nullable: true })
+  longitude?: number;
+
+  @Column({ nullable: true })
+  bio?: string;
+
   @ManyToOne(() => Roles, (role: Roles) => role.users)
   role: Roles;
+
+  @OneToMany(() => ServiceRating, rating => rating.user)
+  serviceRatings: ServiceRating[];
+
+  @OneToMany(() => EventRating, rating => rating.user)
+  eventRatings: EventRating[];
 
   @OneToOne(() => Password, password => password.user, { cascade: true })
   Password: Password;

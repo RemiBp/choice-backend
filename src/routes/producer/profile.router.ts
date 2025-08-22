@@ -14,12 +14,14 @@ ProducerProfileRouter.get('/getProducerbyId/:id', ProfileController.getProducerb
 ProducerProfileRouter.use(authenticateJWT);
 ProducerProfileRouter.use(checkStatus);
 
+ProducerProfileRouter.get('/getAllServiceType', ProfileController.getAllServiceType);
 ProducerProfileRouter.put('/updateProfile', ProfileController.updateProfile);
 ProducerProfileRouter.get('/getProfile', ProfileController.getProfile);
 ProducerProfileRouter.post('/setOperationalHours', ProfileController.setOperationalHours);
 ProducerProfileRouter.get('/getOperationalDays', ProfileController.getOperationalDays);
 ProducerProfileRouter.post('/capacity', ProfileController.setCapacity);
 ProducerProfileRouter.post('/setServiceType', ProfileController.setServiceType);
+ProducerProfileRouter.get('/getServiceType', ProfileController.getServiceType);
 ProducerProfileRouter.post('/setGalleryImages', ProfileController.setGalleryImages);
 ProducerProfileRouter.get('/getGalleryImages', ProfileController.getGalleryImages);
 

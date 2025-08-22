@@ -20,18 +20,28 @@ import { In } from 'typeorm';
 
 export const updateProfile = async (userId: number, updateProfileObject: UpdateProfileSchema) => {
   try {
-    const { firstName, lastName, phoneNumber, profilePicture } = updateProfileObject;
-    const user = await UserRepository.findOne({ where: { id: userId } });
+    const { fullName, profilePicture, email, phoneNumber, userName, bio, latitude, longitude } = updateProfileObject;
+
+    const user = await UserRepository.findOne({
+      where: { id: userId },
+    });
+
     if (!user) {
       throw new NotFoundError('User not found');
     }
-    user.phoneNumber = phoneNumber;
-    user.firstName = firstName;
-    user.profilePicture = profilePicture;
-    user.lastName = lastName;
-    const updateUser = await UserRepository.save(user);
 
-    return { message: 'Profile Updated successfully' };
+    user.fullName = fullName;
+    user.profilePicture = profilePicture;
+    user.email = email;
+    user.phoneNumber = phoneNumber;
+    user.userName = userName;
+    user.bio = bio;
+    user.latitude = latitude;
+    user.longitude = longitude;
+
+    await UserRepository.save(user);
+
+    return { message: 'Profile updated successfully' };
   } catch (error) {
     console.error('Error in updateProfile', { error });
     throw error;
@@ -278,10 +288,10 @@ export const addFavouriteRestaurant = async (
       throw new BadRequestError("userId is invalid");
     }
     const restaurant = await RestaurantRepository.findOne({
-      where: { 
+      where: {
         user: { id: restaurantId, isActive: true, isDeleted: false },
-       },
-      relations: ["user",  "user.role"],
+      },
+      relations: ["user", "user.role"],
     });
     if (!restaurant) {
       throw new NotFoundError("Restaurant not found");
@@ -380,7 +390,7 @@ export const removeFavouriteRestaurant = async (
 //     if (!favouriteRestaurants || favouriteRestaurants.length === 0) {
 //       return { favouriteRestaurants: [] };
 //     }
-    
+
 //     const restaurantIds = favouriteRestaurants.map(
 //       (fav: { restaurant: { id: any } }) => fav.restaurant.id,
 //     );
@@ -420,11 +430,11 @@ export const getFavouriteRestaurants = async (
 
     const favouriteRestaurants = await FavouriteRestaurantRepository.find({
       where: { user: { id: userId } },
-      relations: ["restaurant"], 
+      relations: ["restaurant"],
     });
 
 
-    if ( favouriteRestaurants.length === 0) {
+    if (favouriteRestaurants.length === 0) {
       return { favouriteRestaurants: [] };
     }
 

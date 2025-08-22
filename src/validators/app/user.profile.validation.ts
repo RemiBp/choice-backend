@@ -17,10 +17,14 @@ export const presignedURLSchema = z.object({
 export type PreSignedURL = z.infer<typeof presignedURLSchema>;
 
 export const updateProfileSchema = z.object({
-  firstName: z.string().min(2).max(255).optional(),
-  lastName: z.string().min(2).max(255).optional(),
+  fullName: z.string().min(2).max(255).optional(),
   profilePicture: z.string({ required_error: 'profilePicture is required' }).trim(),
+  email: z.string().email('Invalid email address').optional(),
   phoneNumber: z.string().min(2).max(255).optional(),
+  userName: z.string().min(2).max(255).optional(),
+  bio: z.string().max(500).optional(),
+  latitude: z.number({ required_error: 'Latitude is required' }),
+  longitude: z.number({ required_error: 'Longitude is required' }),
 });
 
 export type UpdateProfileSchema = z.infer<typeof updateProfileSchema>;

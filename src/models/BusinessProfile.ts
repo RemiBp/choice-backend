@@ -41,6 +41,12 @@ export default class BusinessProfile {
   @Column({ nullable: true })
   profileImageUrl?: string;
 
+  @Column({ type: 'float', nullable: true })
+  latitude?: number;
+
+  @Column({ type: 'float', nullable: true })
+  longitude?: number;
+
   @OneToOne(() => User, user => user.businessProfile, { onDelete: 'CASCADE' })
   @JoinColumn()
   user: User;

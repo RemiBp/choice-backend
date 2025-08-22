@@ -1,10 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
-import { createPostSchema, createProducerPostSchema, CreateRatingSchema, EmotionSchema, updatePostSchema } from '../../validators/producer/post.validation';
+import { createPostSchema, createProducerPostSchema, CreateRatingSchema, EmotionSchema, toggleFollowSchema, updatePostSchema } from '../../validators/producer/post.validation';
 import { PostService } from '../../services/producer/post.service';
 import { sendApiResponse } from '../../utils/sendApiResponse';
 import { BadRequestError } from '../../errors/badRequest.error';
 import { NotFoundError } from '../../errors/notFound.error';
 import { UserRepository } from '../../repositories';
+
+export const getProducerPlaces = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { query, type } = req.query;
+
+        if (!query || !type) {
+            return res.status(400).json({ message: "Query and type are required" });
+        }
+
+        const results = await PostService.searchProducers(query.toString(), type.toString());
+        return sendApiResponse(res, 200, 'places fetched successfully.', results);
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 export const createUserPost = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -55,12 +71,24 @@ export const getPosts = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-export const getPostById = async (req: Request, res: Response, next: NextFunction) => {
+export const getUserPostById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
         const postId = Number(req.params.postId);
 
-        const post = await PostService.getPostById(userId, postId);
+        const post = await PostService.getUserPostById(userId, postId);
+        return sendApiResponse(res, 200, 'Post retrieved successfully.', post);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getProducerPostById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        const postId = Number(req.params.postId);
+
+        const post = await PostService.getProducerPostById(userId, postId);
         return sendApiResponse(res, 200, 'Post retrieved successfully.', post);
     } catch (error) {
         next(error);
@@ -69,7 +97,7 @@ export const getPostById = async (req: Request, res: Response, next: NextFunctio
 
 export const updatePost = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const postId = req.params.id;
+        const postId = Number(req.params.id);
         const userId = req.userId;
 
         const parsed = updatePostSchema.safeParse({ ...req.body, postId });
@@ -98,8 +126,48 @@ export const saveRatings = async (req: Request, res: Response, next: NextFunctio
         const postId = Number(req.params.postId);
 
         const parsed = CreateRatingSchema.parse(req.body);
+
         const result = await PostService.saveRatings(userId, postId, parsed);
-        return sendApiResponse(res, 200, 'Rating submitted successfully.', result);
+
+        return sendApiResponse(res, 200, "Rating submitted successfully.", result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const createServiceRatings = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        const postId = Number(req.params.postId);
+        const { ratings } = req.body;
+
+        const result = await PostService.createServiceRatings({
+            userId: Number(userId),
+            postId,
+            ratings,
+        });
+
+        res.status(201).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const createEventRatings = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        const postId = Number(req.params.postId);
+
+        const { eventId, ratings } = req.body;
+
+        const result = await PostService.createEventRatings({
+            userId,
+            postId,
+            eventId: Number(eventId),
+            ratings,
+        });
+
+        res.status(201).json(result);
     } catch (err) {
         next(err);
     }
@@ -237,9 +305,21 @@ export const getPostStatistics = async (req: Request, res: Response, next: NextF
 export const toggleFollowProducer = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
-        const { producerId, followedUserId } = req.body;
 
-        const result = await PostService.toggleFollow(userId, producerId, followedUserId);
+        const parsed = toggleFollowSchema.parse(req.body);
+        const result = await PostService.toggleFollow(userId, parsed.producerId, parsed.followedUserId);
+        return sendApiResponse(res, 200, result.message, result.data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const approvedRequest = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        const followId = Number(req.params.followId);
+
+        const result = await PostService.approvedRequest(userId, followId);
         return sendApiResponse(res, 200, result.message, result.data);
     } catch (error) {
         next(error);

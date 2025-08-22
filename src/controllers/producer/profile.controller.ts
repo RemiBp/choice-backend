@@ -16,6 +16,18 @@ import {
 import { ProfileService } from '../../services/producer/profile.service';
 import { time } from 'console';
 
+export const getAllServiceType = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const eventTypes = await ProfileService.getAllServiceType();
+    res.status(200).json({
+      message: "Services types fetched successfully",
+      eventTypes,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validatedObject = updateProfileSchema.parse(req.body);
@@ -171,11 +183,29 @@ export const getMenu = async (req: Request, res: Response, next: NextFunction) =
 export const setServiceType = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;
-    const { serviceType } = setServiceTypeSchema.parse(req.body);
+
+    const { serviceTypeIds } = setServiceTypeSchema.parse(req.body);
 
     const result = await ProfileService.setServiceType({
       userId: Number(userId),
-      serviceType,
+      serviceTypeIds,
+    });
+
+    res.status(200).json({
+      message: "Service types updated successfully",
+      ...result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getServiceType = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+
+    const result = await ProfileService.getServiceType({
+      userId: Number(userId),
     });
 
     res.status(200).json(result);
@@ -183,6 +213,7 @@ export const setServiceType = async (req: Request, res: Response, next: NextFunc
     next(err);
   }
 };
+
 
 export const setGalleryImages = async (req: Request, res: Response, next: NextFunction) => {
   try {
