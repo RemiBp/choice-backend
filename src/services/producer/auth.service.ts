@@ -9,6 +9,9 @@ import {
   UserRepository,
   BusinessProfileRepository,
   ProducerRepository,
+  LeisureRepository,
+  WellnessRepository,
+  RestaurantRatingRepository,
 } from '../../repositories';
 import { sendOTPEmail } from '../mail.service';
 import { generateOTP } from '../../utils/generateOTP';
@@ -139,6 +142,22 @@ export const register = async (signUpInput: SignUp) => {
     });
 
     await queryRunner.manager.save(ProducerRepository.target, producer);
+
+    // Insert into child table depending on role
+    if (role === BusinessRole.LEISURE) {
+      const leisure = LeisureRepository.create({ producerId: producer.id });
+      await queryRunner.manager.save(LeisureRepository.target, leisure);
+    }
+
+    if (role === BusinessRole.RESTAURANT) {
+      const restaurant = RestaurantRatingRepository.create({ producerId: producer.id });
+      await queryRunner.manager.save(RestaurantRatingRepository.target, restaurant);
+    }
+
+    if (role === BusinessRole.WELLNESS) {
+      const wellness = WellnessRepository.create({ producerId: producer.id });
+      await queryRunner.manager.save(WellnessRepository.target, wellness);
+    }
 
     await queryRunner.commitTransaction();
 

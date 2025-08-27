@@ -28,7 +28,6 @@ export const getNearbyProducers = async ({
         ])
         .addSelect(`${distExpr}`, "distance_km")
         .andWhere("p.isActive = true")
-        .andWhere("p.type = :type", { type })
         .andWhere("p.latitude IS NOT NULL AND p.longitude IS NOT NULL")
         .andWhere(`${distExpr} <= :radius`, { radius })
         .setParameters({ lat: latitude, lng: longitude })
@@ -36,17 +35,12 @@ export const getNearbyProducers = async ({
         .offset((page - 1) * limit)
         .limit(limit);
 
-    const rows = await qb.getRawMany();
+    if (type) {
+        qb.andWhere("p.type = :type", { type });
+    }
 
-    return rows.map((r: any) => ({
-        id: Number(r.id),
-        name: r.name,
-        type: r.type,
-        latitude: Number(r.latitude),
-        longitude: Number(r.longitude),
-        address: r.address,
-        distanceKm: Number(r.distance_km),
-    }));
+    const rows = await qb.getRawMany();
+    return rows;
 };
 
 export * as MapsService from './maps.service';

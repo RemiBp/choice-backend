@@ -2,14 +2,12 @@ import { NextFunction, Request, Response } from 'express';
 import { createEventSchema } from '../../validators/producer/event.validation';
 import { EventService } from '../../services/producer/event.service';
 import { EventStatus } from '../../enums/eventStatus.enum';
+import { sendApiResponse } from '../../utils/sendApiResponse';
 
 export const getEventTypes = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const eventTypes = await EventService.getEventTypes();
-        res.status(200).json({
-            message: "Event types fetched successfully",
-            eventTypes,
-        });
+        return sendApiResponse(res, 200, "Event types fetched successfully", eventTypes);
     } catch (error) {
         next(error);
     }
@@ -18,14 +16,10 @@ export const getEventTypes = async (req: Request, res: Response, next: NextFunct
 export const createEvent = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
-        if (!userId) {
-            throw new Error('userId is required');
-        }
         const eventData = createEventSchema.parse(req.body);
 
         const result = await EventService.createEvent(userId, eventData);
-
-        res.status(201).json(result);
+        return sendApiResponse(res, 200, "Event created successfully", result);
     } catch (error) {
         next(error);
     }
@@ -34,15 +28,10 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
 export const getAllEvents = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
-        if (!userId) {
-            throw new Error('userId is required');
-        }
-
         const status = req.query.status as EventStatus | undefined;
 
         const events = await EventService.getAllEvents(userId, status);
-
-        res.status(200).json(events);
+        return sendApiResponse(res, 200, "Events fetched successfully", events);
     } catch (error) {
         next(error);
     }
@@ -51,17 +40,10 @@ export const getAllEvents = async (req: Request, res: Response, next: NextFuncti
 export const getEventById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
-        if (!userId) {
-            throw new Error('userId is required');
-        }
-        const eventId = parseInt(req.params.eventId, 10);
-        if (isNaN(eventId)) {
-            throw new Error('Invalid event ID');
-        }
+        const eventId = Number(req.params.eventId);
 
         const event = await EventService.getEventById(userId, eventId);
-
-        res.status(200).json(event);
+        return sendApiResponse(res, 200, "Event fetched successfully", event);
     } catch (error) {
         next(error);
     }
@@ -70,19 +52,12 @@ export const getEventById = async (req: Request, res: Response, next: NextFuncti
 export const updateEvent = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
-        if (!userId) {
-            throw new Error('userId is required');
-        }
-        const eventId = parseInt(req.params.eventId, 10);
-        if (isNaN(eventId)) {
-            throw new Error('Invalid event ID');
-        }
+        const eventId = Number(req.params.eventId);
 
         const eventData = createEventSchema.partial().parse(req.body);
 
         const result = await EventService.updateEvent(userId, eventId, eventData);
-
-        res.status(200).json(result);
+        return sendApiResponse(res, 200, "Event updated successfully", result);
     } catch (error) {
         next(error);
     }
@@ -91,17 +66,10 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
 export const deleteEvent = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
-        if (!userId) {
-            throw new Error('userId is required');
-        }
-        const eventId = parseInt(req.params.eventId, 10);
-        if (isNaN(eventId)) {
-            throw new Error('Invalid event ID');
-        }
+        const eventId = Number(req.params.eventId);
 
         const result = await EventService.deleteEvent(userId, eventId);
-
-        res.status(200).json(result);
+        return sendApiResponse(res, 200, "Event Deleted successfully", result);
     } catch (error) {
         next(error);
     }

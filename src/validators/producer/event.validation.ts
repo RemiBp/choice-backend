@@ -3,10 +3,11 @@ import { ServiceType } from '../../enums/serviceType.enum';
 import { EventStatus } from '../../enums/eventStatus.enum';
 
 export const createEventSchema = z.object({
-    eventTypeId: z.number({ required_error: 'Event type is required' }),
+    eventTypeId: z.number().optional(),
     title: z.string().min(3, 'Event title is required'),
     description: z.string().optional(),
-    experienceType: z.nativeEnum(ServiceType, {
+    venueName: z.string().optional(),
+    serviceType: z.nativeEnum(ServiceType, {
         required_error: 'Experience type is required',
     }),
     location: z.string().min(3, 'Location is required'),

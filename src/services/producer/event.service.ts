@@ -18,163 +18,138 @@ export const getEventTypes = async () => {
 };
 
 export const createEvent = async (userId: number, data: CreateEventInput) => {
-
     const producer = await ProducerRepository.findOne({ where: { userId } });
     if (!producer) {
-        throw new NotFoundError('Producer not found');
+        throw new NotFoundError("Producer not found");
     }
 
-    if (producer.type !== 'leisure') {
-        throw new BadRequestError('Only leisure producers can create events');
+    if (producer.type !== "leisure" && producer.type !== "restaurant") {
+        throw new BadRequestError("Only leisure and restaurant producers can create events");
     }
 
-    const leisure = await LeisureRepository.findOne({
-        where: { producerId: producer.id },
-    });
-    if (!leisure) {
-        throw new NotFoundError('Leisure record not found for this producer');
-    }
+    let leisureId: number | null = null;
+    let eventTypeId: number | null = null;
 
-    if (!data.eventTypeId) {
-        throw new BadRequestError('Event type is required');
-    }
+    if (producer.type === "leisure") {
+        if (!data.eventTypeId) {
+            throw new BadRequestError("Event type is required for Leisure events");
+        }
 
-    const eventType = await EventTypeRepository.findOne({
-        where: { id: data.eventTypeId },
-    });
-    if (!eventType) {
-        throw new NotFoundError('Invalid Event Type provided');
+        const leisure = await LeisureRepository.findOne({
+            where: { producerId: producer.id },
+        });
+        if (!leisure) {
+            throw new NotFoundError("Leisure record not found for this producer");
+        }
+        leisureId = leisure.id;
+
+        const eventType = await EventTypeRepository.findOne({
+            where: { id: data.eventTypeId },
+        });
+        if (!eventType) {
+            throw new NotFoundError("Invalid Event Type provided");
+        }
+        eventTypeId = eventType.id;
     }
 
     const newEvent = await EventRepository.save({
         ...data,
-        producerId: producer.id,
-        leisureId: leisure.id,
-        eventTypeId: eventType.id,
-        isActive: true,
-        isDeleted: false,
+        producer: { id: producer.id },
+        leisure: leisureId ? { id: leisureId } : null,
+        eventType: eventTypeId ? { id: eventTypeId } : null,
     });
 
-    return {
-        message: 'Event created successfully.',
-        event: newEvent,
-    };
+    return newEvent;
 };
 
 export const getAllEvents = async (userId: number, status?: EventStatus) => {
     const producer = await ProducerRepository.findOne({ where: { userId } });
-    if (!producer) {
-        throw new NotFoundError('Producer not found');
-    }
+    if (!producer) throw new NotFoundError("Producer not found");
 
-    const leisure = await LeisureRepository.findOne({ where: { producerId: producer.id } });
-    if (!leisure) {
-        throw new NotFoundError('Leisure profile not found for this producer');
-    }
+    const whereClause: any = {
+        producer: { id: producer.id },
+    };
 
-    if (status && !Object.values(EventStatus).includes(status)) {
-        throw new BadRequestError('Invalid event status');
-    }
+    if (status) whereClause.status = status;
 
-    const events = await EventRepository.find({
-        where: {
-            leisureId: leisure.id,
-            isDeleted: false,
-            ...(status ? { status } : {}),
-        },
-        relations: ['leisure'],
+    return EventRepository.find({
+        where: whereClause,
+        relations: ["producer", "leisure", "eventType"],
     });
-
-    return events;
 };
 
 export const getEventById = async (userId: number, eventId: number) => {
     const producer = await ProducerRepository.findOne({ where: { userId } });
-    if (!producer) {
-        throw new NotFoundError('Producer not found');
-    }
-
-    const leisure = await LeisureRepository.findOne({ where: { producerId: producer.id } });
-    if (!leisure) {
-        throw new NotFoundError('Leisure profile not found for this producer');
-    }
+    if (!producer) throw new NotFoundError("Producer not found");
 
     const event = await EventRepository.findOne({
-        where: { id: eventId, leisureId: leisure.id, isDeleted: false },
-        relations: ['leisure'],
+        where: { id: eventId, producer: { id: producer.id }, isDeleted: false },
+        relations: ["producer", "leisure", "eventType"],
     });
 
-    if (!event) {
-        throw new NotFoundError('Event not found');
-    }
+    if (!event) throw new NotFoundError("Event not found");
 
-    const totalParticipantsResult = await EventBookingRepository
-        .createQueryBuilder('booking')
-        .select('SUM(booking.numberOfPersons)', 'total')
-        .where('booking.eventId = :eventId AND booking.isCancelled = false', { eventId })
+    const { total } = await EventBookingRepository
+        .createQueryBuilder("booking")
+        .select("SUM(booking.numberOfPersons)", "total")
+        .where("booking.eventId = :eventId AND booking.isCancelled = false", { eventId })
         .getRawOne();
-
-    const totalParticipants = Number(totalParticipantsResult.total) || 0;
 
     return {
         ...event,
-        totalParticipants,
+        totalParticipants: Number(total) || 0,
     };
 };
 
 export const updateEvent = async (userId: number, eventId: number, data: Partial<CreateEventInput>) => {
     const producer = await ProducerRepository.findOne({ where: { userId } });
     if (!producer) {
-        throw new NotFoundError('Producer not found');
-    }
-
-    const leisure = await LeisureRepository.findOne({ where: { producerId: producer.id } });
-    if (!leisure) {
-        throw new NotFoundError('Leisure profile not found for this producer');
+        throw new NotFoundError("Producer not found");
     }
 
     const event = await EventRepository.findOne({
-        where: { id: eventId, leisureId: leisure.id, isDeleted: false },
+        where: {
+            id: eventId,
+            producer: { id: producer.id },
+        },
+        relations: ["producer"],
     });
+
     if (!event) {
-        throw new NotFoundError('Event not found');
+        throw new NotFoundError("Event not found");
     }
 
     Object.assign(event, data);
 
     await EventRepository.save(event);
 
-    return {
-        message: 'Event updated successfully.',
-        eventId: event,
-    };
+    return event;
 };
 
 export const deleteEvent = async (userId: number, eventId: number) => {
 
     const producer = await ProducerRepository.findOne({ where: { userId } });
     if (!producer) {
-        throw new NotFoundError('Producer not found');
-    }
-
-    const leisure = await LeisureRepository.findOne({ where: { producerId: producer.id } });
-    if (!leisure) {
-        throw new NotFoundError('Leisure profile not found for this producer');
+        throw new NotFoundError("Producer not found");
     }
 
     const event = await EventRepository.findOne({
-        where: { id: eventId, leisureId: leisure.id, isDeleted: false },
+        where: {
+            id: eventId,
+            producer: { id: producer.id },
+        },
+        relations: ["producer"],
     });
 
     if (!event) {
-        throw new NotFoundError('Event not found');
+        throw new NotFoundError("Event not found");
     }
 
-    event.isDeleted = true;
-    await EventRepository.save(event);
+    await EventRepository.remove(event);
 
     return {
-        message: 'Event deleted successfully.',
+        success: true,
+        eventId: event.id,
     };
 };
 

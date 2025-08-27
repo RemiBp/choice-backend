@@ -8,7 +8,7 @@ export const NearbyProducersSchema = z.object({
     latitude: z.coerce.number(),
     longitude: z.coerce.number(),
     radius: z.coerce.number().default(5), // km
-    type: z.enum(["restaurant", "leisure", "wellness"]),
+    type: z.enum(["restaurant", "leisure", "wellness"]).optional(),
     sort: z.enum(["distance", "rating"]).default("distance"),
     limit: z.coerce.number().default(30),
     page: z.coerce.number().default(1),

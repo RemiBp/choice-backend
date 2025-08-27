@@ -36,10 +36,13 @@ export default class Event {
     endTime: string;
 
     @Column({ nullable: true })
+    venueName: string
+
+    @Column({ nullable: true })
     location: string;
 
     @Column({ type: 'enum', enum: ServiceType, nullable: true })
-    experienceType: ServiceType;
+    serviceType: ServiceType;
 
     @Column('decimal', { precision: 10, scale: 2, nullable: true })
     pricePerGuest: number;
@@ -59,11 +62,11 @@ export default class Event {
     @OneToMany(() => EventRating, rating => rating.event, { cascade: true })
     ratings: EventRating[];
 
-    @ManyToOne(() => Leisure, leisure => leisure.events, { onDelete: 'CASCADE' })
+    @ManyToOne(() => Leisure, leisure => leisure.events, { onDelete: 'CASCADE', nullable: true })
     @JoinColumn({ name: 'leisureId' })
     leisure: Leisure;
 
-    @Column()
+    @Column({ nullable: true })
     leisureId: number;
 
     @ManyToOne(() => EventType, type => type.events, { onDelete: 'SET NULL' })
