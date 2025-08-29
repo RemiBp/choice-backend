@@ -30,6 +30,8 @@ export const signUpSchema = z.object({
   password: z.string({ required_error: 'Password is required' }).trim(),
   businessName: z.string().trim().min(2),
   role: z.enum(businessRoles),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 export type SignUp = z.infer<typeof signUpSchema>;

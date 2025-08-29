@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { BookingController } from '../../controllers/app/booking.controller';
-import { authenticateJWT, checkStatus } from '../../middlewares/auth.middleware';
+import { authenticateJWT, authenticateUserJWT, checkStatus } from '../../middlewares/auth.middleware';
 
 const BookingRouter = Router();
 BookingRouter.get('/', (req, res) => {
   res.send('Hit Customer Booking route');
 });
 
-BookingRouter.use(authenticateJWT);
+BookingRouter.use(authenticateUserJWT);
 BookingRouter.use(checkStatus);
 
 BookingRouter.post('/findRestaurantsNearby', BookingController.findRestaurantsNearby);

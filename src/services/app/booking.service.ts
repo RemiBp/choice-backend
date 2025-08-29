@@ -3,6 +3,7 @@ import {
   CuisineTypeRepository,
   FavouriteRestaurantRepository,
   NotificationRepository,
+  ProducerRepository,
   RestaurantImagesRepository,
   RestaurantRepository,
   ReviewRepository,
@@ -40,11 +41,19 @@ export const findRestaurantsNearby = async (findRestaurantsNearByObject: FindRes
     const user = await UserRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundError('User not found');
 
-    const searchRadius: number = radius || 10000;
-    const vehicleSpeed: number = 30;
+    const searchRadius: number = radius || 10000; // meters
+    const vehicleSpeed: number = 30; // km/h
 
-    const baseQuery = RestaurantRepository.createQueryBuilder('restaurant')
+    // base query with distance calculation
+    const baseQuery = ProducerRepository.createQueryBuilder('restaurant')
       .innerJoin('restaurant.user', 'restaurantUser')
+      .addSelect(
+        `ST_Distance(
+          "restaurant"."locationPoint"::geography,
+          ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
+        )`,
+        'distance'
+      )
       .where(
         `ST_DWithin(
           "restaurant"."locationPoint"::geography,
@@ -57,77 +66,54 @@ export const findRestaurantsNearby = async (findRestaurantsNearByObject: FindRes
       .andWhere('restaurantUser.isDeleted = false')
       .andWhere('restaurant.isActive = true')
       .andWhere('restaurantUser.isActive = true')
-      .andWhere('restaurant.accountStatus = :status', { status: 'approved' })
-      .andWhere('restaurant.restaurantName ILIKE :keyword', { keyword: `%${keyword}%` });
-
-    const totalRestaurants = await baseQuery.getCount();
-    const paginatedQuery = baseQuery
-      .leftJoinAndSelect('restaurant.cuisineType', 'cuisineType')
-      .innerJoinAndSelect('restaurant.user', 'user')
-      .addSelect(
-        `ST_Distance(
-          "restaurant"."locationPoint"::geography,
-          ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
-        )`,
-        'distance'
-      )
+      .andWhere('restaurant.name ILIKE :keyword', { keyword: `%${keyword}%` })
       .skip((page - 1) * limit)
       .take(limit)
       .orderBy('distance', 'ASC');
 
-    const restaurants = await paginatedQuery.getRawAndEntities();
+    const [restaurants, totalRestaurants] = await baseQuery.getManyAndCount();
 
-    if (!restaurants || restaurants.entities.length === 0) {
-      return restaurants
+    if (!restaurants || restaurants.length === 0) {
+      return {
+        restaurants: [],
+        totalRestaurants: 0,
+        currentPage: page,
+        totalPages: 0,
+      };
     }
 
-    const favouriteRestaurants = await FavouriteRestaurantRepository.find({
-      where: { user: { id: userId } },
-      relations: ["restaurant"],
-      select: ["id", "restaurant.id"],
+    // get favourites for user
+    // const favouriteRestaurants = await FavouriteRestaurantRepository.find({
+    //   where: { user: { id: userId } },
+    //   relations: ['producer'],
+    //   select: ['id'], // keep minimal
+    // });
+
+    // const favouriteRestaurantIds = favouriteRestaurants.map(
+    //   (fav: { producer: { id: any; }; }) => fav.producer.id
+    // );
+
+    // fetch raw distances alongside entities
+    const { raw, entities } = await baseQuery.getRawAndEntities();
+
+    const restaurantsWithDetails = entities.map((restaurant: { id: any; name: any; address: any; latitude: any; longitude: any; user: { profilePicture: any; }; }, index: string | number) => {
+      const distanceInMeters = parseFloat(raw[index].distance);
+      const distanceInKm = distanceInMeters / 1000;
+      const etaInHours = distanceInKm / vehicleSpeed;
+      const etaInMinutes = Math.round(etaInHours * 60);
+
+      return {
+        id: restaurant.id,
+        restaurantName: restaurant.name,
+        address: restaurant.address,
+        latitude: restaurant.latitude,
+        longitude: restaurant.longitude,
+        profilePicture: restaurant.user?.profilePicture || null,
+        //isFav: favouriteRestaurantIds.includes(restaurant.id),
+        etaInMinutes,
+        distance: Math.round(distanceInMeters),
+      };
     });
-
-    const favouriteRestaurantIds = favouriteRestaurants.map(
-      (favourite: { restaurant: { id: any } }) => favourite.restaurant.id,
-    );
-
-    const restaurantsWithDetails = restaurants.entities.map(
-      (
-        restaurant: {
-          user: { id: any; profilePicture: any };
-          restaurantName: any;
-          address: any;
-          latitude: any;
-          longitude: any;
-          rating: any;
-          cuisineType: any;
-        },
-        index: string | number
-      ) => {
-        const distanceInMeters = restaurants.raw[index].distance;
-        const distanceInKm = distanceInMeters / 1000;
-        const etaInHours = distanceInKm / vehicleSpeed;
-        const etaInMinutes = Math.round(etaInHours * 60);
-        let isFav = false;
-        if (favouriteRestaurantIds.includes(restaurant.user.id)) {
-          isFav = true;
-        }
-
-        return {
-          id: restaurant.user.id,
-          restaurantName: restaurant.restaurantName,
-          address: restaurant.address,
-          latitude: restaurant.latitude,
-          longitude: restaurant.longitude,
-          profilePicture: restaurant.user.profilePicture || null,
-          isFav,
-          etaInMinutes,
-          distance: Math.round(distanceInMeters),
-          rating: restaurant.rating,
-          cuisineType: restaurant.cuisineType,
-        };
-      }
-    );
 
     return {
       restaurants: restaurantsWithDetails,
@@ -141,6 +127,7 @@ export const findRestaurantsNearby = async (findRestaurantsNearByObject: FindRes
   }
 };
 
+
 export const findRestaurantsByCuisine = async (findRestaurantsByCuisineObject: FindRestaurantsByCuisineSchema) => {
   try {
     const { userId, latitude, longitude, cuisineTypeId, page = 1, limit = 10, radius } = findRestaurantsByCuisineObject;
@@ -150,7 +137,7 @@ export const findRestaurantsByCuisine = async (findRestaurantsByCuisineObject: F
 
     const searchRadius: number = radius || 10000;
     const vehicleSpeed: number = 30;
-    const baseQuery = RestaurantRepository.createQueryBuilder('restaurant')
+    const baseQuery = ProducerRepository.createQueryBuilder('restaurant')
       .innerJoin('restaurant.user', 'restaurantUser')
       .where(
         `ST_DWithin(
@@ -262,12 +249,12 @@ export const getRestaurant = async (userId: number, restaurantId: number) => {
   try {
     const restaurant = await UserRepository.findOne({
       where: { id: restaurantId },
-      relations: ['role', 'restaurant', 'restaurant.cuisineType', 'operationalHours', 'paymentMethods' ],
+      relations: ['role', 'producer', 'operationalHours', 'paymentMethods' ],
     });
-    const isFav = await FavouriteRestaurantRepository.findOne({
-      where: { user: { id: userId }, restaurant: { id: restaurantId } },
-    });
-    restaurant.isFav = isFav ? true : false;
+    // const isFav = await FavouriteRestaurantRepository.findOne({
+    //   where: { user: { id: userId }, restaurant: { id: restaurantId } },
+    // });
+    // restaurant.isFav = isFav ? true : false;
 
     return { restaurant };
   } catch (error) {
@@ -351,12 +338,10 @@ export const createBooking = async (hireObject: CreateBookingSchema) => {
     if (!user) throw new NotFoundError('User not found');
     if (user.role.name !== 'user') throw new BadRequestError('userId is invalid');
 
-    const restaurant = await UserRepository.findOne({
-      where: { id: restaurantId },
-      relations: ['restaurant', 'role'],
+    const restaurant = await ProducerRepository.findOne({
+      where: { user: { id: restaurantId } },
     });
     if (!restaurant) throw new NotFoundError('restaurant not found');
-    if (restaurant.role.name !== 'restaurant') throw new BadRequestError('restaurantId is invalid');
     if (restaurant.isDeleted) throw new BadRequestError('restaurant is deleted, Kindly book someone else');
 
     const slot = await SlotRepository.findOne({ where: { id: slotId } });
@@ -374,9 +359,8 @@ export const createBooking = async (hireObject: CreateBookingSchema) => {
 
     if (alredyBooked) throw new BadRequestError('Same Slot already booked for you at this restaurant');
 
-    const { address, latitude, longitude } = restaurant.restaurant;
-
-    if (!address || !latitude || !longitude) throw new BadRequestError('location is required');
+    const { address, latitude, longitude } = restaurant;
+    if (!latitude || !longitude) throw new BadRequestError('location is required');
 
     let bookingDate = date ? new Date(date) : new Date();
     const nowInTimeZone = new Date(new Date().toLocaleString('en-US', { timeZone }));
@@ -395,8 +379,8 @@ export const createBooking = async (hireObject: CreateBookingSchema) => {
 
     const booking = BookingRepository.create({
       customer: user,
-      restaurant: restaurant,
-      customerName: `${user.firstName} ${user.lastName}`,
+      restaurant: restaurantId,
+      customerName: `${user.fullName}`,
       startDateTime: bookingStartTime,
       endDateTime: bookingEndTime,
       bookingDate: formattedBookingDate,
@@ -418,36 +402,36 @@ export const createBooking = async (hireObject: CreateBookingSchema) => {
     });
 
     const saveBooking = await BookingRepository.save(booking);
-    if (restaurant.deviceId) {
-      const notificationData = {
-        sender: { id: userId },
-        receiver: { id: restaurant.id },
-        notificationId: NotificationStatusCode.BOOKING_CREATED,
-        jobId: booking.id,
-        title: 'Booking Created',
-        body: `${user.firstName} has reserved a booking at your restaurant.`,
-        type: NotificationTypeEnums.BOOKING_CREATED,
-        purpose: NotificationTypeEnums.BOOKING_CREATED,
-        restaurantName: restaurant.restaurant.restaurantName,
-      };
-      const notification = NotificationRepository.create(notificationData);
-      await NotificationRepository.save(notification);
-      const notificationPayload = {
-        notificationId: String(NotificationStatusCode.BOOKING_CREATED),
-        bookingId: String(booking.id),
-        type: NotificationTypeEnums.BOOKING_CREATED,
-        userId: String(user.id),
-        profilePicture: String(user.profilePicture),
-        name: user.firstName,
-      };
+    // if (restaurant.deviceId) {
+    //   const notificationData = {
+    //     sender: { id: userId },
+    //     receiver: { id: restaurant.id },
+    //     notificationId: NotificationStatusCode.BOOKING_CREATED,
+    //     jobId: booking.id,
+    //     title: 'Booking Created',
+    //     body: `${user.firstName} has reserved a booking at your restaurant.`,
+    //     type: NotificationTypeEnums.BOOKING_CREATED,
+    //     purpose: NotificationTypeEnums.BOOKING_CREATED,
+    //     restaurantName: restaurant.restaurant.restaurantName,
+    //   };
+    //   const notification = NotificationRepository.create(notificationData);
+    //   await NotificationRepository.save(notification);
+    //   const notificationPayload = {
+    //     notificationId: String(NotificationStatusCode.BOOKING_CREATED),
+    //     bookingId: String(booking.id),
+    //     type: NotificationTypeEnums.BOOKING_CREATED,
+    //     userId: String(user.id),
+    //     profilePicture: String(user.profilePicture),
+    //     name: user.firstName,
+    //   };
 
-      await sendAdminNotification(
-        restaurant.deviceId,
-        "Booking Created",
-        `${user.firstName} has reserved a booking at your restaurant. Please check your reservation`,
-        notificationPayload,
-      );
-    }
+    //   await sendAdminNotification(
+    //     restaurant.deviceId,
+    //     "Booking Created",
+    //     `${user.firstName} has reserved a booking at your restaurant. Please check your reservation`,
+    //     notificationPayload,
+    //   );
+    // }
 
     
 

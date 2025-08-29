@@ -10,6 +10,7 @@ import {
   Column,
 } from "typeorm";
 import User from "./User";
+import Producer from "./Producer";
 
 @Entity("FavouriteRestaurant")
 export default class FavouriteRestaurant {
@@ -25,7 +26,7 @@ export default class FavouriteRestaurant {
 
   @ManyToOne(() => User, (user) => user.favouriteRestaurant)
   @JoinColumn({ name: "restaurantId" })
-  restaurant: User;
+  restaurant: Producer;
 
   @Column()
   restaurantId: number;

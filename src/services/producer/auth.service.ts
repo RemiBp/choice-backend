@@ -70,7 +70,7 @@ export const register = async (signUpInput: SignUp) => {
   await queryRunner.startTransaction();
 
   try {
-    const { email, password, businessName, role } = signUpInput;
+    const { email, password, businessName, role, latitude, longitude } = signUpInput;
 
     const existingUser = await queryRunner.manager.findOne(UserRepository.target, {
       where: { email: email.toLowerCase() },
@@ -140,6 +140,14 @@ export const register = async (signUpInput: SignUp) => {
       isDeleted: false,
       user: savedUser,
     });
+    if(latitude && longitude){
+      producer.latitude = latitude;
+      producer.longitude = longitude;
+      producer.locationPoint = {
+        type: 'Point',
+        coordinates: [longitude, latitude],
+      };
+    }
 
     await queryRunner.manager.save(ProducerRepository.target, producer);
 

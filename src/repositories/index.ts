@@ -50,6 +50,8 @@ import EventRating from '../models/EventRating';
 import EventType from '../models/EventTypes';
 import WellnessServiceType from '../models/WellnessServiceTypes';
 import WellnessService from '../models/WellnessServices';
+import MenuCategory from '../models/MenuCategory';
+import MenuDishes from '../models/MenuDishes';
 
 export const UserRepository = PostgresDataSource.getRepository(User);
 export const RolesRepository = PostgresDataSource.getRepository(Roles);
@@ -102,3 +104,5 @@ export const RestaurantRatingRepository = PostgresDataSource.getRepository(Resta
 export const LeisurePostRatingRepository = PostgresDataSource.getRepository(LeisurePostRating);
 export const WellnessPostRatingRepository = PostgresDataSource.getRepository(WellnessPostRating);
 export const RestaurantPostRatingRepository = PostgresDataSource.getRepository(RestaurantPostRating);
+export const MenuCategoryRepository = PostgresDataSource.getRepository(MenuCategory);
+export const MenuDishesRepository = PostgresDataSource.getRepository(MenuDishes);

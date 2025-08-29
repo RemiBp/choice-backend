@@ -9,6 +9,7 @@ import {
     OneToOne,
     JoinColumn,
     ManyToOne,
+    Point,
 } from 'typeorm';
 import Photo from './Photos';
 import AIAnalysis from './AIAnalysis';
@@ -20,6 +21,7 @@ import { ProducerStatus } from '../enums/producerStatus.enum';
 import Event from './Event';
 import Post from './Post';
 import Follow from './Follow';
+import MenuCategory from './MenuCategory';
 
 @Entity('Producers')
 export default class Producer {
@@ -57,6 +59,15 @@ export default class Producer {
     @Column('decimal', { precision: 10, scale: 6, nullable: true })
     longitude: number;
 
+    @Column({
+    type: 'geometry',
+    spatialFeatureType: 'Point',
+    srid: 4326,
+    nullable: true,
+    })
+    @Index({ spatial: true })
+    locationPoint: Point;
+
     @Column('jsonb', { nullable: true })
     rating: {
         average: number;
@@ -70,7 +81,13 @@ export default class Producer {
     website: string;
 
     @Column({ nullable: true })
-    totalCapacity: number;
+    totalSeats: number;
+
+    @Column({ nullable: true })
+    noOfTables: number;
+
+    @Column({ nullable: true })
+    maxPartySize: number;
 
     @Column({
         type: 'enum',
@@ -109,6 +126,9 @@ export default class Producer {
 
     @OneToMany(() => Photo, photo => photo.producer)
     photos: Photo[];
+
+    @OneToMany(() => MenuCategory, MenuCategory => MenuCategory.producer)
+    menuCategory: MenuCategory[];
 
     @OneToOne(() => AIAnalysis, analysis => analysis.producer)
     aiAnalysis: AIAnalysis;

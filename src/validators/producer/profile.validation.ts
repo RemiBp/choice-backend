@@ -79,9 +79,8 @@ const dayHourSchema = z
   );
 
 export const setOperationHoursSchema = z.object({
-  hours: z
-    .array(dayHourSchema)
-    .length(7, 'Exactly 7 days of hours must be provided'),
+  restaurantId: z.number({ required_error: 'restaurantId is required' }),
+  hours: z.array(dayHourSchema).length(7, 'Exactly 7 days of hours must be provided'),
 });
 
 export type SetOperationHoursSchema = z.infer<typeof setOperationHoursSchema>;
@@ -103,8 +102,16 @@ export const uploadRestaurantImagesSchema = z.object({
 export type UploadRestaurantImagesSchema = z.infer<typeof uploadRestaurantImagesSchema>;
 
 export const setCapacitySchema = z.object({
-  totalCapacity: z
-    .number({ required_error: 'Total capacity is required' })
+  totalSeats: z
+    .number({ required_error: 'totalSeats is required' })
+    .int('Must be an integer')
+    .positive('Must be greater than 0'),
+    noOfTables: z
+    .number({ required_error: 'noOfTables is required' })
+    .int('Must be an integer')
+    .positive('Must be greater than 0'),
+    maxPartySize: z
+    .number({ required_error: 'maxPartySize is required' })
     .int('Must be an integer')
     .positive('Must be greater than 0'),
 });
@@ -164,3 +171,14 @@ export const reviewsAndRatingsSchema = z.object({
 });
 
 export type ReviewsAndRatingsSchema = z.infer<typeof reviewsAndRatingsSchema>;
+
+
+export const addMenuDishSchema = z.object({
+  userId: z.number({ required_error: 'userId is required' }),
+  name: z.string({ required_error: 'name is required' }),
+  price: z.number({ required_error: 'price is required' }),
+  description: z.string({ required_error: 'description is required' }),
+  categoryId: z.number({ required_error: 'categoryId is required' }),
+});
+
+export type AddMenuDish = z.infer<typeof addMenuDishSchema>;

@@ -57,5 +57,9 @@ ProducerProfileRouter.get('/customerChart', ProfileController.customerChart);
 ProducerProfileRouter.get('/getRepeatAndNewCustomerCounts', ProfileController.getRepeatAndNewCustomerCounts);
 ProducerProfileRouter.get("/getNotifications", ProfileController.getNotifications);
 ProducerProfileRouter.put("/readNotification/:id", ProfileController.readNotification);
+ProducerProfileRouter.post("/addMenuCategory", ProfileController.addMenuCategory);
+ProducerProfileRouter.get("/getMenuCategories", ProfileController.getMenuCategories);
+ProducerProfileRouter.post("/addMenuDish", ProfileController.addMenuDish);
+ProducerProfileRouter.get("/getMenu", ProfileController.getMenu);
 
 export default ProducerProfileRouter;

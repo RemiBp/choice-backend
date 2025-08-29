@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import {
+  addMenuDishSchema,
   deleteRestaurantImageSchema,
   getRestaurantImagesSchema,
   presignedURLSchema,
@@ -246,13 +247,19 @@ export const getGalleryImages = async (req: Request, res: Response, next: NextFu
 export const setOperationalHours = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const hours = req.body.hours;
-    const validatedObject = setOperationHoursSchema.parse({ hours });
-    const userId = Number(req.userId);
-
-    const response = await ProfileService.setOperationalHours({
-      ...validatedObject,
-      userId,
+    const restaurantId = Number(req.userId);
+    if (!restaurantId) {
+      throw new Error('restaurantId is required');
+    }
+    if (!hours) {
+      throw new Error('hours is required');
+    }
+    const validatedObject = setOperationHoursSchema.parse({
+      restaurantId,
+      hours,
     });
+
+    const response = await ProfileService.setOperationalHours(validatedObject);
 
     res.status(200).json(response);
   } catch (error) {
@@ -273,9 +280,9 @@ export const getOperationalDays = async (req: Request, res: Response, next: Next
 export const setCapacity = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = Number(req.userId);
-    const { totalCapacity } = setCapacitySchema.parse(req.body);
+    const { totalSeats, noOfTables, maxPartySize } = setCapacitySchema.parse(req.body);
 
-    const response = await ProfileService.setCapacity({ userId, totalCapacity });
+    const response = await ProfileService.setCapacity({ userId, totalSeats, noOfTables, maxPartySize });
 
     res.status(200).json(response);
   } catch (error) {
@@ -617,5 +624,52 @@ export const readNotification = async (
     next(error);
   }
 };
+
+export const addMenuCategory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    const menuCategory = req.body.menuCategory;
+    const response = await ProfileService.addMenuCategory(userId, menuCategory);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMenuCategories = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10
+    const response = await ProfileService.getMenuCategories(userId, page, limit);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const addMenuDish = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    const name = req.body.name;
+    const description = req.body.description;
+    const price = req.body.price;
+    const categoryId = req.body.categoryId;
+    const validatedObject = addMenuDishSchema.parse({
+      userId,
+      name,
+      description,
+      price,
+      categoryId,
+    });
+    const response = await ProfileService.addMenuDish(validatedObject);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
 
 export * as ProfileController from './profile.controller';

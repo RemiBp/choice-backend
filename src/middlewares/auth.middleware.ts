@@ -34,6 +34,34 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
   }
 };
 
+export const authenticateUserJWT = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, process.env.JWT_ACCESS_SECRET!, (err, user) => {
+      if (err || !user) {
+        return res.sendStatus(401);
+      }
+
+      if (typeof user !== 'string' && 'id' in user) {
+        const payload = user as UserPayload;
+        const userRole = ['user'];
+        if (!userRole.includes(payload.role.name)) {
+          return res.status(401).json({ message: 'User is not an app user' });
+        }
+        req.userId = payload.id;
+        next();
+      } else {
+        res.sendStatus(401);
+      }
+    });
+  } else {
+    res.sendStatus(401);
+  }
+};
+
 export const checkStatus = async (req: Request, res: Response, next: NextFunction) => {
   if (req.userId) {
     const userId = req.userId;
