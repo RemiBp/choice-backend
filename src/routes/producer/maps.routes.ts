@@ -11,6 +11,6 @@ ProducerMapRouter.use(authenticateJWTForBooking);
 ProducerMapRouter.use(checkStatus);
 
 ProducerMapRouter.get('/getNearbyProducers', MapsController.getNearbyProducers);
-
+ProducerMapRouter.get('/getProducerDetails/:id', MapsController.getProducerDetails);
 
 export default ProducerMapRouter;

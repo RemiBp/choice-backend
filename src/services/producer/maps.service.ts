@@ -1,4 +1,6 @@
-import { ProducerRepository } from '../../repositories';
+import { FollowStatusEnums } from '../../enums/followStatus.enum';
+import { NotFoundError } from '../../errors/notFound.error';
+import { FollowRepository, PostRepository, ProducerRepository } from '../../repositories';
 import { ChoiceMapInput, GetFilteredRestaurantsInput, NearbyProducersInput } from '../../validators/producer/maps.validation';
 
 const EARTH_RADIUS_KM = 6371;
@@ -41,6 +43,36 @@ export const getNearbyProducers = async ({
 
     const rows = await qb.getRawMany();
     return rows;
+};
+
+export const getProducerDetails = async (id: number) => {
+    const producer = await ProducerRepository.findOne({
+        where: { id },
+        relations: ["photos", "openingHours", "user"],
+    });
+
+    if (!producer) throw new NotFoundError("Producer not found");
+
+    const postsCount = await PostRepository.count({ where: { producerId: id } });
+    const followersCount = await FollowRepository.count({ where: { producerId: id } });
+    const followingCount = await FollowRepository.count({
+        where: { followerId: producer.user.id, status: FollowStatusEnums.Approved },
+    });
+
+    const recentPosts = await PostRepository.find({
+        where: { producerId: id, isDeleted: false },
+        relations: ["images"],
+        order: { createdAt: "DESC" },
+        take: 5,
+    });
+
+    return {
+        ...producer,
+        postsCount,
+        followersCount,
+        followingCount,
+        recentPosts,
+    };
 };
 
 export * as MapsService from './maps.service';

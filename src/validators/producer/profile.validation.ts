@@ -43,6 +43,13 @@ export const presignedURLSchema = z
 
 export type PreSignedURL = z.infer<typeof presignedURLSchema>;
 
+export const ProducerDocumentSchema = z.object({
+  type: z.string().min(1, "Document type is required"),
+  fileUrl: z.string().min(1, "File URL is required"),
+});
+
+export type ProducerDocumentInput = z.infer<typeof ProducerDocumentSchema>;
+
 export const updateProfileSchema = z.object({
   businessName: z.string({ required_error: 'Business name is required' }).trim(),
   address: z.string({ required_error: 'Address is required' }).trim(),
@@ -84,8 +91,6 @@ export const setOperationHoursSchema = z.object({
 });
 
 export type SetOperationHoursSchema = z.infer<typeof setOperationHoursSchema>;
-
-export * as ProfileSchema from './profile.validation';
 
 export const uploadRestaurantImagesSchema = z.object({
   restaurantId: z.number({ required_error: 'restaurantId is required' }),
@@ -182,3 +187,5 @@ export const addMenuDishSchema = z.object({
 });
 
 export type AddMenuDish = z.infer<typeof addMenuDishSchema>;
+
+export * as ProfileSchema from './profile.validation';

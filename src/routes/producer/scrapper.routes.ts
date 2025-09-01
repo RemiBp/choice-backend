@@ -1,0 +1,24 @@
+import { Router } from 'express';
+import { AuthController } from '../../controllers/producer/auth.controller';
+import { ProfileController } from '../../controllers/producer/profile.controller';
+import { ScrapperController } from '../../controllers/producer/scrapper.controller';
+
+const ScrapperRouter = Router();
+ScrapperRouter.get('/', (req, res) => {
+    res.send('Hit scrapping route');
+});
+
+// For scrapping
+ScrapperRouter.post('/createProducer', AuthController.createProducer);
+ScrapperRouter.get('/getProducers', ProfileController.getProducers);
+ScrapperRouter.get('/getProducerbyId/:id', ProfileController.getProducerbyId);
+ScrapperRouter.post("/ratings/restaurant/:producerId", ScrapperController.saveRestaurantAIRating);
+ScrapperRouter.post("/ratings/leisure/:producerId", ScrapperController.saveLeisureAIRating);
+ScrapperRouter.post("/ratings/wellness/:producerId", ScrapperController.saveWellnessAIRating);
+ScrapperRouter.post('/setOperationalHours', ProfileController.setOperationalHours);
+ScrapperRouter.post('/getPreSignedUrl', ScrapperController.getPreSignedUrl);
+ScrapperRouter.post('/setGalleryImages', ScrapperController.setGalleryImages);
+ScrapperRouter.post('/setOperationalHours', ProfileController.setOperationalHours);
+
+
+export default ScrapperRouter;

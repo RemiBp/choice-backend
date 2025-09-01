@@ -592,9 +592,9 @@ export const setOperationalHours = async (input: SetOperationHoursSchema) => {
       }
     }
     //if (restaurant.slotDuration) {
-      setImmediate(() => generateSlotsForRestaurant(restaurantId));
+    setImmediate(() => generateSlotsForRestaurant(restaurantId));
     //}
-    
+
 
     return {
       message: 'Operational hours set successfully.',
@@ -1775,17 +1775,17 @@ export const readNotification = async (
 };
 
 export const addMenuCategory = async (userId: number, menuCategory: string) => {
-  try { 
+  try {
     const user = await UserRepository.findOne({
-    where: { id: userId },
-    relations: ['producer'],
-  });
+      where: { id: userId },
+      relations: ['producer'],
+    });
 
-  if (!user || !user.producer) {
-    throw new NotFoundError('Producer not found for this user');
-  }
+    if (!user || !user.producer) {
+      throw new NotFoundError('Producer not found for this user');
+    }
 
-  const producer = user.producer;
+    const producer = user.producer;
 
     const newMenuCategory = new MenuCategory();
     newMenuCategory.name = menuCategory;
@@ -1794,7 +1794,8 @@ export const addMenuCategory = async (userId: number, menuCategory: string) => {
 
     return {
       message: "Menu category added successfully.",
-    };  } catch (error) {
+    };
+  } catch (error) {
     throw error;
   }
 };
@@ -1824,7 +1825,7 @@ export const getMenuCategories = async (userId: number, page: number, limit: num
     return {
       menuCategories,
       count,
-      currentPage: page,  
+      currentPage: page,
       totalPage: Math.ceil(count / limit),
     };
   } catch (error) {
@@ -1848,7 +1849,8 @@ export const addMenuDish = async (input: AddMenuDish) => {
     await MenuDishesRepository.save(newMenuDish);
     return {
       message: "Menu dish added successfully.",
-    };  } catch (error) {
+    };
+  } catch (error) {
     throw error;
   }
 };

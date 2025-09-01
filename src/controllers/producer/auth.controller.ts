@@ -10,7 +10,8 @@ import {
   getPresignedDocumentSchema,
   submitDocumentsSchema,
 } from '../../validators/producer/auth.validation';
-import { presignedURLSchema } from '../../validators/producer/profile.validation';
+import { presignedURLSchema, ProducerDocumentSchema } from '../../validators/producer/profile.validation';
+import { sendApiResponse } from '../../utils/sendApiResponse';
 
 export const createProducer = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -60,6 +61,20 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
     next(error);
   }
 };
+
+export const saveDocument = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    const document = ProducerDocumentSchema.parse(req.body);
+
+    const saved = await AuthService.saveDocument(userId, document);
+
+    return sendApiResponse(res, 201, "Document uploaded successfully", saved);
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 export const getPreSignedUrl = async (req: Request, res: Response, next: NextFunction) => {
   try {

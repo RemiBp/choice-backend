@@ -52,6 +52,7 @@ import WellnessServiceType from '../models/WellnessServiceTypes';
 import WellnessService from '../models/WellnessServices';
 import MenuCategory from '../models/MenuCategory';
 import MenuDishes from '../models/MenuDishes';
+import ProducerDocument from '../models/ProducerDocument';
 
 export const UserRepository = PostgresDataSource.getRepository(User);
 export const RolesRepository = PostgresDataSource.getRepository(Roles);
@@ -77,6 +78,7 @@ export const UnavailableSlotRepository = PostgresDataSource.getRepository(Unavai
 export const BusinessProfileRepository = PostgresDataSource.getRepository(BusinessProfile);
 export const OpeningHoursRepository = PostgresDataSource.getRepository(OpeningHours);
 export const ProducerRepository = PostgresDataSource.getRepository(Producer);
+export const ProducerDocumentRepository = PostgresDataSource.getRepository(ProducerDocument);
 export const EventRepository = PostgresDataSource.getRepository(Event);
 export const PhotoRepository = PostgresDataSource.getRepository(Photo);
 export const EventBookingRepository = PostgresDataSource.getRepository(EventBooking);

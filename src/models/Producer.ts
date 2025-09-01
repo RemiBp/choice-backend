@@ -22,6 +22,7 @@ import Event from './Event';
 import Post from './Post';
 import Follow from './Follow';
 import MenuCategory from './MenuCategory';
+import ProducerDocument from './ProducerDocument';
 
 @Entity('Producers')
 export default class Producer {
@@ -60,10 +61,10 @@ export default class Producer {
     longitude: number;
 
     @Column({
-    type: 'geometry',
-    spatialFeatureType: 'Point',
-    srid: 4326,
-    nullable: true,
+        type: 'geometry',
+        spatialFeatureType: 'Point',
+        srid: 4326,
+        nullable: true,
     })
     @Index({ spatial: true })
     locationPoint: Point;
@@ -123,6 +124,9 @@ export default class Producer {
     @OneToOne(() => User, { nullable: true, onDelete: 'CASCADE' })
     @JoinColumn({ name: 'userId' })
     user: User;
+
+    @OneToMany(() => ProducerDocument, (doc) => doc.producer)
+    documents: ProducerDocument[];
 
     @OneToMany(() => Photo, photo => photo.producer)
     photos: Photo[];

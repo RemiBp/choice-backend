@@ -325,35 +325,71 @@ export const saveRatings = async (
     const type = post.type || post.producer.type;
     if (!type) throw new BadRequestError("Post type not found");
 
-    let repo: any, globalRepo: any, allowedFields: string[], extraField: Record<string, number> = {};
+    let repo: any,
+        globalRepo: any,
+        allowedFields: string[],
+        entityId: number = 0,
+        extraField: Record<string, number> = {};
 
     switch (type) {
-        case BusinessRole.RESTAURANT:
+        case BusinessRole.RESTAURANT: {
+            const restaurant = await RestaurantRatingRepository.findOne({
+                where: { producerId: post.producer.id },
+            });
+            if (!restaurant) {
+                throw new BadRequestError(
+                    `Restaurant profile not found for producerId=${post.producer.id}`
+                );
+            }
+
             repo = RestaurantPostRatingRepository;
             globalRepo = RestaurantRatingRepository;
             allowedFields = Object.values(RestaurantRatingCriteria) as string[];
-            extraField = { restaurantId: post.producer.id };
+            entityId = restaurant.id;
+            extraField = { restaurantId: entityId };
             break;
+        }
 
-        case BusinessRole.LEISURE:
+        case BusinessRole.LEISURE: {
+            const leisure = await LeisureRepository.findOne({
+                where: { producerId: post.producer.id },
+            });
+            if (!leisure) {
+                throw new BadRequestError(
+                    `Leisure profile not found for producerId=${post.producer.id}`
+                );
+            }
+
             repo = LeisurePostRatingRepository;
             globalRepo = LeisureRepository;
             allowedFields = Object.values(LeisureRatingCriteria) as string[];
-            extraField = { leisureId: post.producer.id };
+            entityId = leisure.id;
+            extraField = { leisureId: entityId };
             break;
+        }
 
-        case BusinessRole.WELLNESS:
+        case BusinessRole.WELLNESS: {
+            const wellness = await WellnessRepository.findOne({
+                where: { producerId: post.producer.id },
+            });
+            if (!wellness) {
+                throw new BadRequestError(
+                    `Wellness profile not found for producerId=${post.producer.id}`
+                );
+            }
+
             repo = WellnessPostRatingRepository;
             globalRepo = WellnessRepository;
             allowedFields = Object.values(WellnessRatingCriteria) as string[];
-            extraField = { wellnessId: post.producer.id };
+            entityId = wellness.id ?? 0;
+            extraField = { wellnessId: entityId };
             break;
+        }
 
         default:
             throw new BadRequestError("Invalid post type");
     }
 
-    // ✅ Validate criteria keys
     const invalidKeys = Object.keys(ratings).filter(
         (key) => !allowedFields.includes(key)
     );
@@ -363,7 +399,6 @@ export const saveRatings = async (
         );
     }
 
-    // ✅ Save or update rating
     const existing = await repo.findOne({ where: { userId, postId } });
     let savedRating;
     if (existing) {
@@ -379,8 +414,9 @@ export const saveRatings = async (
         });
     }
 
-    // ✅ Update global after saving
-    await updateGlobalRating(type, postId, post.producer.id, globalRepo, savedRating);
+    if (entityId) {
+        await updateGlobalRating(type, postId, entityId, globalRepo, savedRating);
+    }
 
     return {
         postId,
@@ -392,7 +428,7 @@ export const saveRatings = async (
 async function updateGlobalRating(
     type: BusinessRole,
     postId: number,
-    producerId: number,
+    entityId: number,
     globalRepo: any,
     newRating?: any
 ) {
@@ -418,10 +454,10 @@ async function updateGlobalRating(
             return;
     }
 
-    let ratings = await postRepo.find({ where: { postId } });
+    const ratings = await postRepo.find({ where: { postId } });
 
     // 👇 Ensure freshly saved rating is included
-    if (newRating && !ratings.find((r: { id: any; }) => r.id === newRating.id)) {
+    if (newRating && !ratings.find((r: { id: any }) => r.id === newRating.id)) {
         ratings.push(newRating);
     }
 
@@ -447,7 +483,7 @@ async function updateGlobalRating(
         ).toFixed(1)
     );
 
-    // ✅ Update correct global table
+    // ✅ Update correct global table with sub-entity id
     await globalRepo
         .createQueryBuilder()
         .update()
@@ -455,7 +491,7 @@ async function updateGlobalRating(
             ...averages,
             overall,
         })
-        .where("id = :id", { id: producerId })
+        .where("id = :id", { id: entityId })
         .execute();
 }
 

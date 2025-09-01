@@ -7,10 +7,6 @@ ProducerProfileRouter.get('/', (req, res) => {
   res.send('Hit Restaurant profile route');
 });
 
-// For Scrapping
-ProducerProfileRouter.get('/getProducers', ProfileController.getProducers);
-ProducerProfileRouter.get('/getProducerbyId/:id', ProfileController.getProducerbyId);
-
 ProducerProfileRouter.use(authenticateJWT);
 ProducerProfileRouter.use(checkStatus);
 

@@ -13,4 +13,15 @@ export const getNearbyProducers = async (req: Request, res: Response, next: Next
     }
 };
 
+export const getProducerDetails = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.params.id);
+        const data = await MapsService.getProducerDetails(id);
+
+        return sendApiResponse(res, 200, "Producers fetched successfully", data);
+    } catch (err) {
+        next(err);
+    }
+};
+
 export * as MapsController from './maps.controller';

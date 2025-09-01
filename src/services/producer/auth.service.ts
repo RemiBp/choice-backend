@@ -12,6 +12,7 @@ import {
   LeisureRepository,
   WellnessRepository,
   RestaurantRatingRepository,
+  ProducerDocumentRepository,
 } from '../../repositories';
 import { sendOTPEmail } from '../mail.service';
 import { generateOTP } from '../../utils/generateOTP';
@@ -42,7 +43,28 @@ import { BusinessRole } from '../../enums/Producer.enum';
 import { ProducerStatus } from '../../enums/producerStatus.enum';
 import { getPresignedUploadUrl } from '../../utils/s3Service';
 import s3Service from '../s3.service';
-import { PreSignedURL } from '../../validators/producer/profile.validation';
+import { PreSignedURL, ProducerDocumentInput } from '../../validators/producer/profile.validation';
+import Producer from '../../models/Producer';
+
+// export const createProducer = async (input: CreateProducer) => {
+//   const existing = await ProducerRepository.findOne({
+//     where: { placeId: input.placeId },
+//   });
+
+//   if (existing) {
+//     throw new BadRequestError('Producer with this Place ID already exists');
+//   }
+
+//   const producer = ProducerRepository.create({
+//     ...input,
+//     status: ProducerStatus.PENDING,
+//     isActive: true,
+//     isDeleted: false,
+//     user: null,
+//   });
+
+//   return await ProducerRepository.save(producer);
+// };
 
 export const createProducer = async (input: CreateProducer) => {
   const existing = await ProducerRepository.findOne({
@@ -50,9 +72,10 @@ export const createProducer = async (input: CreateProducer) => {
   });
 
   if (existing) {
-    throw new BadRequestError('Producer with this Place ID already exists');
+    throw new BadRequestError("Producer with this Place ID already exists");
   }
 
+  // Step 1: Create Producer
   const producer = ProducerRepository.create({
     ...input,
     status: ProducerStatus.PENDING,
@@ -61,7 +84,38 @@ export const createProducer = async (input: CreateProducer) => {
     user: null,
   });
 
-  return await ProducerRepository.save(producer);
+  const savedProducer = await ProducerRepository.save(producer);
+
+  // Step 2: Create linked rating row based on type
+  let linkedRecord: any = null;
+
+  switch (savedProducer.type) {
+    case BusinessRole.RESTAURANT:
+      linkedRecord = RestaurantRatingRepository.create({
+        producerId: savedProducer.id,
+      });
+      await RestaurantRatingRepository.save(linkedRecord);
+      break;
+
+    case BusinessRole.LEISURE:
+      linkedRecord = LeisureRepository.create({
+        producerId: savedProducer.id,
+      });
+      await LeisureRepository.save(linkedRecord);
+      break;
+
+    case BusinessRole.WELLNESS:
+      linkedRecord = WellnessRepository.create({
+        producerId: savedProducer.id,
+      });
+      await WellnessRepository.save(linkedRecord);
+      break;
+
+    default:
+      throw new BadRequestError("Unsupported producer type");
+  }
+
+  return savedProducer;
 };
 
 export const register = async (signUpInput: SignUp) => {
@@ -140,7 +194,7 @@ export const register = async (signUpInput: SignUp) => {
       isDeleted: false,
       user: savedUser,
     });
-    if(latitude && longitude){
+    if (latitude && longitude) {
       producer.latitude = latitude;
       producer.longitude = longitude;
       producer.locationPoint = {
@@ -298,6 +352,28 @@ export const verifyOtp = async (verifyOtpObject: VerifyOtpSchema) => {
     console.error('Error in verifyOtp', { error, verifyOtpObject }, 'AuthService');
     throw error;
   }
+};
+
+export const saveDocument = async (userId: number, document: ProducerDocumentInput) => {
+  const producer = await ProducerRepository.findOne({
+    where: { user: { id: userId } },
+  });
+
+  if (!producer) throw new NotFoundError("Producer profile not found");
+
+  const saved = await ProducerDocumentRepository.save({
+    type: document.type,
+    fileUrl: document.fileUrl,
+    producer: { id: producer.id } as Producer,
+  });
+
+  return {
+    id: saved.id,
+    type: saved.type,
+    fileUrl: saved.fileUrl,
+    producerId: producer.id,
+    createdAt: saved.createdAt,
+  };
 };
 
 export const getPreSignedUrl = async (userId: number, getPreSignedURLObject: PreSignedURL) => {
