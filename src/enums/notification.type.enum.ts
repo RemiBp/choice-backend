@@ -8,4 +8,5 @@ export enum NotificationTypeEnums {
   BOOKING_START_REMINDER = 'bookingStartReminder',
   BOOKING_CUSTOMER_CHECKIN = 'bookingCustomerCheckin',
   BOOKING_UPDATED = 'bookingUpdated',
+  CHAT_MESSAGE = 'chatMessage',
 }

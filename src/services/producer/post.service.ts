@@ -747,7 +747,7 @@ export const togglePostLike = async (userId: number, postId: number) => {
     let stats = await PostStatisticsRepository.findOneBy({ postId });
 
     if (!stats) {
-        stats = PostStatisticsRepository.save({
+        stats = await PostStatisticsRepository.save({
             postId,
             totalLikes: 0,
             totalShares: 0,
@@ -778,7 +778,7 @@ export const togglePostLike = async (userId: number, postId: number) => {
         like.deletedAt = null;
         await PostLikeRepository.save(like);
     } else {
-        like = PostLikeRepository.save({
+        like = await PostLikeRepository.save({
             userId,
             postId,
             isDeleted: false,
@@ -797,7 +797,7 @@ export const togglePostLike = async (userId: number, postId: number) => {
         const postOwner = await UserRepository.findOneBy({ id: postOwnerId });
 
         if (postOwner) {
-            const notification = NotificationRepository.save({
+            const notification = await NotificationRepository.save({
                 notificationId: PostNotificationCode.POST_LIKED,
                 receiver: postOwner,
                 sender: user,
@@ -828,15 +828,76 @@ export const togglePostLike = async (userId: number, postId: number) => {
     return { liked: true, totalLikes: post.likesCount };
 };
 
-export const addCommentToPost = async (userId: number, postId: number, comment: string) => {
-    if (!comment || comment.trim() === '') {
-        throw new BadRequestError('Comment cannot be empty');
+// export const addCommentToPost = async (userId: number, postId: number, comment: string) => {
+//     if (!comment || comment.trim() === '') {
+//         throw new BadRequestError('Comment cannot be empty');
+//     }
+
+//     const post = await PostRepository.findOneBy({ id: postId, isDeleted: false });
+//     if (!post) throw new NotFoundError('Post not found or already deleted');
+
+//     const stats = await PostStatisticsRepository.findOneBy({ postId });
+
+//     const newComment = await PostCommentRepository.save({
+//         userId,
+//         postId,
+//         comment: comment.trim(),
+//         isDeleted: false,
+//     });
+
+//     post.commentCount += 1;
+//     if (stats) stats.totalComments += 1;
+
+//     await Promise.all([
+//         PostRepository.save(post),
+//         stats ? PostStatisticsRepository.save(stats) : null,
+//     ]);
+
+//     return {
+//         comment: newComment,
+//         totalComments: post.commentCount,
+//     };
+// };
+
+
+export const addCommentToPost = async (
+    userId: number,
+    postId: number,
+    comment: string
+) => {
+    if (!comment || comment.trim() === "") {
+        throw new BadRequestError("Comment cannot be empty");
+    }
+
+    const user = await UserRepository.findOne({
+        where: { id: userId, isDeleted: false },
+        relations: ["role"],
+    });
+
+    if (!user) {
+        throw new NotFoundError("User not found");
+    }
+
+    if (user.role.name !== RoleName.USER) {
+        throw new BadRequestError("Only users can comment on posts");
     }
 
     const post = await PostRepository.findOneBy({ id: postId, isDeleted: false });
-    if (!post) throw new NotFoundError('Post not found or already deleted');
+    if (!post) throw new NotFoundError("Post not found or already deleted");
 
-    const stats = await PostStatisticsRepository.findOneBy({ postId });
+    let stats = await PostStatisticsRepository.findOneBy({ postId });
+    if (!stats) {
+        stats = await PostStatisticsRepository.save({
+            postId,
+            totalLikes: 0,
+            totalShares: 0,
+            totalComments: 0,
+            totalRatings: 0,
+            averageRating: null,
+            criteriaRatings: {},
+            emotionCounts: {},
+        });
+    }
 
     const newComment = await PostCommentRepository.save({
         userId,
@@ -846,12 +907,50 @@ export const addCommentToPost = async (userId: number, postId: number, comment: 
     });
 
     post.commentCount += 1;
-    if (stats) stats.totalComments += 1;
+    stats.totalComments += 1;
 
     await Promise.all([
         PostRepository.save(post),
-        stats ? PostStatisticsRepository.save(stats) : null,
+        PostStatisticsRepository.save(stats),
     ]);
+
+    // 🔔 Notify post owner
+    const postOwnerId = post.userId ?? post.producerId;
+
+    if (postOwnerId && postOwnerId !== userId) {
+        const postOwner = await UserRepository.findOneBy({ id: postOwnerId });
+
+        if (postOwner) {
+            // Save DB notification
+            const notification = await NotificationRepository.save({
+                notificationId: PostNotificationCode.POST_COMMENTED,
+                receiver: postOwner,
+                sender: user,
+                title: "New Comment on Your Post",
+                body: `${user.fullName} commented: "${comment.trim()}"`,
+                type: NotificationTypeEnums.POST_COMMENT,
+                purpose: NotificationTypeEnums.POST_COMMENT,
+            });
+
+            // Push FCM notification
+            if (postOwner.deviceId) {
+                const notificationPayload = {
+                    notificationId: String(PostNotificationCode.POST_COMMENTED),
+                    postId: String(post.id),
+                    type: NotificationTypeEnums.POST_COMMENT,
+                    senderId: String(userId),
+                    createdAt: new Date().toISOString(),
+                };
+
+                await sendAdminNotification(
+                    postOwner.deviceId,
+                    notification.title,
+                    notification.body,
+                    notificationPayload
+                );
+            }
+        }
+    }
 
     return {
         comment: newComment,

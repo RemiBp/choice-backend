@@ -1,13 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
 import { BookingService } from '../../services/producer/booking.service';
 import { bookingIdParamSchema, createBookingSchema } from '../../validators/producer/booking.validation';
+import { sendApiResponse } from '../../utils/sendApiResponse';
 
 export const createBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;
-    if (!userId) {
-      throw new Error('userId is required');
-    }
     const eventId = Number(req.params.eventId);
     const data = createBookingSchema.parse(req.body);
 
@@ -27,9 +25,6 @@ export const createBooking = async (req: Request, res: Response, next: NextFunct
 export const getUserBookings = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;
-    if (!userId) {
-      throw new Error('userId is required');
-    }
     const result = await BookingService.getBookingsByUser(userId);
     res.status(200).json(result);
   } catch (error) {
@@ -41,9 +36,6 @@ export const getBookingById = async (req: Request, res: Response, next: NextFunc
   try {
     const bookingId = bookingIdParamSchema.parse(req.params).id;
     const userId = req.userId;
-    if (!userId) {
-      throw new Error('userId is required');
-    }
 
     const result = await BookingService.getBookingById(bookingId, userId);
     res.status(200).json(result);
@@ -52,14 +44,10 @@ export const getBookingById = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-
 export const cancelBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const bookingId = Number(req.params.id);
     const userId = req.userId;
-    if (!userId) {
-      throw new Error('userId is required');
-    }
 
     const result = await BookingService.cancelBooking(bookingId, userId);
     res.status(200).json(result);
@@ -83,6 +71,7 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
+// Old APIs
 export const getBookings = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const Booking = String(req.query.booking) || 'scheduled';

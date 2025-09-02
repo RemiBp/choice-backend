@@ -25,6 +25,9 @@ export default class EventBooking {
   @Column({ type: 'int', default: 1 })
   numberOfPersons: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  totalPrice: number;
+
   @Column({ default: false })
   isCancelled: boolean;
 

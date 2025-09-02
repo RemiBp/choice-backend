@@ -1,10 +1,12 @@
 import express from 'express';
+import http from 'http';
 import dotenv from 'dotenv';
 import errHandlingMiddleware from './middlewares/error.middleware';
 import cors from 'cors';
 import AppRouter from './routes/app';
 import ProducerRouter from './routes/producer';
 import adminRouter from './routes/admin';
+import chatSocket from './chats/chatSocket';
 
 const WEBAPP_URL = process.env.WEBAPP_URL;
 const TEMP_WEBAPP_URL = process.env.TEMP_WEBAPP_URL;
@@ -13,6 +15,9 @@ dotenv.config();
 
 const PORT = process.env.PORT || 6543;
 const app = express();
+const server = http.createServer(app);
+chatSocket(server); 
+
 app.get('/', (req, res) => res.status(200).send('OK'));
 app.get('/health', (req, res) => res.status(200).send('OK'));
 app.get('/healthcheck', (req, res) => res.status(200).send('OK'));
@@ -26,7 +31,11 @@ app.use('/api/producer', ProducerRouter);
 app.use('/api/admin', adminRouter);
 app.use(errHandlingMiddleware);
 
-app.listen(PORT, () => {
+// app.listen(PORT, () => {
+//   console.log(`Server running on port ${PORT}`);
+// });
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
