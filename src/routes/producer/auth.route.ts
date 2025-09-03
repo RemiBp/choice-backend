@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { AuthController } from '../../controllers/producer/auth.controller';
-import { authenticateJWT } from '../../middlewares/auth.middleware';
+import { authenticateBothJWT, authenticateJWT } from '../../middlewares/auth.middleware';
 
 const ProducerAuthRouter = Router();
 ProducerAuthRouter.get('/', (req, res) => {
@@ -14,7 +14,7 @@ ProducerAuthRouter.post('/register', AuthController.register);
 ProducerAuthRouter.post('/login', AuthController.login);
 ProducerAuthRouter.post('/verifyOtp', AuthController.verifyOtp);
 ProducerAuthRouter.post('/saveDocument', authenticateJWT, AuthController.saveDocument);
-ProducerAuthRouter.post('/getPreSignedUrl', authenticateJWT, AuthController.getPreSignedUrl);
+ProducerAuthRouter.post('/getPreSignedUrl', authenticateBothJWT, AuthController.getPreSignedUrl);
 ProducerAuthRouter.post('/submitDocuments', authenticateJWT, AuthController.submitDocuments);
 ProducerAuthRouter.post('/resendSignUpOtp', AuthController.resendSignUpOtp);
 ProducerAuthRouter.post('/forgotPassword', AuthController.forgotPassword);
