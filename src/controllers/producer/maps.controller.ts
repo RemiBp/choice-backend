@@ -1,6 +1,6 @@
 import { MapsService } from '../../services/producer/maps.service';
 import { sendApiResponse } from '../../utils/sendApiResponse';
-import { ChoiceMapSchema, getFilteredRestaurantsSchema, NearbyProducersSchema } from '../../validators/producer/maps.validation';
+import { ChoiceMapSchema, createOfferSchema, getFilteredRestaurantsSchema, NearbyProducersSchema } from '../../validators/producer/maps.validation';
 import { Request, Response, NextFunction } from 'express';
 
 export const getNearbyProducers = async (req: Request, res: Response, next: NextFunction) => {
@@ -9,6 +9,28 @@ export const getNearbyProducers = async (req: Request, res: Response, next: Next
         const data = await MapsService.getNearbyProducers(input);
         return sendApiResponse(res, 200, "Nearby producers fetched", data);
     } catch (err) {
+        next(err);
+    }
+};
+
+export const getNearbyUsers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const input = ChoiceMapSchema.parse(req.query);
+        const data = await MapsService.getNearbyUsers(input);
+        return sendApiResponse(res, 200, "Nearby users fetched successfully", data);
+    } catch (err) {
+        console.error("Error in getNearbyUsers controller:", err);
+        next(err);
+    }
+};
+
+export const createProducerOffer = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const validatedData = createOfferSchema.parse(req.body);
+        const offer = await MapsService.createProducerOffer(validatedData);
+        return sendApiResponse(res, 200, "Offer Created successfully", offer);
+    } catch (err) {
+        console.error("Error in createProducerOffer controller:", err);
         next(err);
     }
 };

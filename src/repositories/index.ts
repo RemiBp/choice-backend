@@ -37,7 +37,7 @@ import PostComment from '../models/PostComment';
 import PostShare from '../models/PostShare';
 import PostStatistics from '../models/PostStatistics';
 import Follow from '../models/Follow';
-
+import ProducerOffer from '../models/ProducerOffer';
 
 import Chat from '../models/Chat';
 import Message from '../models/Message';
@@ -99,6 +99,7 @@ export const PostCommentRepository = PostgresDataSource.getRepository(PostCommen
 export const PostShareRepository = PostgresDataSource.getRepository(PostShare);
 export const PostStatisticsRepository = PostgresDataSource.getRepository(PostStatistics);
 export const FollowRepository = PostgresDataSource.getRepository(Follow);
+export const ProducerOfferRepository = PostgresDataSource.getRepository(ProducerOffer);
 export const ProducerServiceRepository = PostgresDataSource.getRepository(ProducerService);
 export const ServiceRatingRepository = PostgresDataSource.getRepository(ServiceRating);
 export const EventRatingRepository = PostgresDataSource.getRepository(EventRating);

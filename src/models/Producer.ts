@@ -23,6 +23,7 @@ import Post from './Post';
 import Follow from './Follow';
 import MenuCategory from './MenuCategory';
 import ProducerDocument from './ProducerDocument';
+import ProducerOffer from './ProducerOffer';
 
 @Entity('Producers')
 export default class Producer {
@@ -145,6 +146,9 @@ export default class Producer {
 
     @OneToMany(() => Event, event => event.producer)
     events: Event[];
+
+    @OneToMany(() => ProducerOffer, offer => offer.producer)
+    offers: ProducerOffer[];
 
     // Social Module Relations
     @OneToMany(() => Post, post => post.producer, { cascade: true })

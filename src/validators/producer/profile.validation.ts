@@ -20,7 +20,7 @@ export const presignedURLSchema = z
     fileName: z.string({ required_error: 'fileName is required' }),
     contentType: z.string({ required_error: 'contentType is required' }),
     folderName: z.enum(
-      ['GalleryImage', 'BusinessDocuments'],
+      ['ChoiceImages','GalleryImage', 'BusinessDocuments'],
       {
         required_error: 'folderName is required',
       }

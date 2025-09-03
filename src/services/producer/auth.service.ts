@@ -267,8 +267,11 @@ export const login = async (loginObject: LoginSchema) => {
       const otp = '000000';
       await SignUpOTPRepository.save({ user, otp });
 
+      // Strip sensitive fields
+      const { Password, businessProfile, ...safeUser } = user;
+
       return {
-        user,
+        user: safeUser,
         accessToken: null,
         refreshToken: null,
         isVerified: false,
@@ -291,8 +294,11 @@ export const login = async (loginObject: LoginSchema) => {
     const accessToken = generateAccessToken(user.id, user.role, user.isActive);
     const refreshToken = generateRefreshToken(user.id, user.role, user.isActive);
 
+    // Strip sensitive fields
+    const { Password, businessProfile, ...safeUser } = user;
+
     return {
-      user,
+      user: safeUser,
       isVerified: true,
       accessToken,
       refreshToken,

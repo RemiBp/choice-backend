@@ -76,32 +76,37 @@ export const getMyEvents = async (userId: number, status?: EventStatus) => {
     });
 };
 
-export const getAllEvents = async ({ status, category, location }: GetAllEventsInput) => {
+export const getAllEvents = async ({ status, category, type, lat, lng, radius }: GetAllEventsInput) => {
     const qb = EventRepository.createQueryBuilder("event")
         .leftJoinAndSelect("event.producer", "producer")
-        .leftJoinAndSelect("event.leisure", "leisure")
-        .leftJoinAndSelect("event.eventType", "eventType");
+        .leftJoinAndSelect("event.leisure", "leisure");
 
-    if (status) qb.andWhere("event.status = :status", { status });
-    if (category) qb.andWhere("event.category = :category", { category });
+    if (status) {
+        qb.andWhere("event.status = :status", { status });
+    }
 
-    if (location) {
+    if (category) {
+        qb.andWhere("event.category = :category", { category });
+    }
+
+    if (lat && lng && radius) {
+        qb.andWhere("event.latitude IS NOT NULL AND event.longitude IS NOT NULL");
         qb.andWhere(
             `
-    (
-      6371 * acos(
-        cos(radians(:lat)) * cos(radians(producer.latitude)) *
-        cos(radians(producer.longitude) - radians(:lng)) +
-        sin(radians(:lat)) * sin(radians(producer.latitude))
-      )
-    ) <= :radius
+      (
+        6371 * acos(
+          cos(radians(:lat)) * cos(radians(event.latitude)) *
+          cos(radians(event.longitude) - radians(:lng)) +
+          sin(radians(:lat)) * sin(radians(event.latitude))
+        )
+      ) <= :radius
     `,
-            {
-                lat: location.lat,
-                lng: location.lng,
-                radius: location.radius,
-            }
+            { lat, lng, radius }
         );
+    }
+
+    if (type) {
+        qb.andWhere("event.serviceType = :type", { type });
     }
 
     return qb.getMany();

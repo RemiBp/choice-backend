@@ -168,20 +168,14 @@ export const CreateServiceRatingsSchema = z.object({
     required_error: "serviceTypeId is required",
     invalid_type_error: "serviceTypeId must be a number",
   }),
-  ratings: z.array(
-    z.object({
-      criteria: z.string({
-        required_error: "criteria is required",
-        invalid_type_error: "criteria must be a string",
-      }),
-      rating: z.number({
-        required_error: "rating is required",
-        invalid_type_error: "rating must be a number",
-      })
-        .min(0, { message: "rating must be greater than or equal to 0" })
-        .max(5, { message: "rating must be less than or equal to 5" }),
+  ratings: z.record(
+    z.number({
+      required_error: "rating is required",
+      invalid_type_error: "rating must be a number",
     })
-  ).min(1, { message: "At least one rating is required" }),
+      .min(0, { message: "rating must be greater than or equal to 0" })
+      .max(5, { message: "rating must be less than or equal to 5" })
+  )
 });
 
 export type CreateServiceRatingsInput = z.infer<typeof CreateServiceRatingsSchema>;

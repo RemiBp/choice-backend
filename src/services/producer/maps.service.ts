@@ -1,7 +1,8 @@
 import { FollowStatusEnums } from '../../enums/followStatus.enum';
+import { OfferStatus } from '../../enums/offer.enum';
 import { NotFoundError } from '../../errors/notFound.error';
-import { FollowRepository, PostRepository, ProducerRepository } from '../../repositories';
-import { ChoiceMapInput, GetFilteredRestaurantsInput, NearbyProducersInput } from '../../validators/producer/maps.validation';
+import { FollowRepository, PostRepository, ProducerOfferRepository, ProducerRepository, UserRepository } from '../../repositories';
+import { ChoiceMapInput, createOfferInput, GetFilteredRestaurantsInput, NearbyProducersInput } from '../../validators/producer/maps.validation';
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -43,6 +44,79 @@ export const getNearbyProducers = async ({
 
     const rows = await qb.getRawMany();
     return rows;
+};
+
+export const getNearbyUsers = async ({ latitude, longitude, radius, }: ChoiceMapInput) => {
+    try {
+        if (!latitude || !longitude) {
+            throw new Error("Latitude and longitude are required");
+        }
+
+        const distExpr = `
+      ${EARTH_RADIUS_KM} * 2 * ASIN(SQRT(
+        POWER(SIN(RADIANS(:lat - u.latitude) / 2), 2) +
+        COS(RADIANS(:lat)) * COS(RADIANS(u.latitude)) *
+        POWER(SIN(RADIANS(:lng - u.longitude) / 2), 2)
+      ))
+    `;
+
+        const qb = UserRepository.createQueryBuilder("u")
+            .select([
+                "u.id AS id",
+                "u.fullName AS fullName",
+                "u.userName AS userName",
+                "u.followingCount AS followingCount",
+                "u.followersCount AS followersCount",
+                "u.latitude AS latitude",
+                "u.longitude AS longitude",
+                "u.bio AS bio"
+            ])
+            .addSelect(`${distExpr}`, "distance_km")
+            .where("u.isActive = :isActive", { isActive: true })
+            .andWhere("u.latitude IS NOT NULL")
+            .andWhere("u.longitude IS NOT NULL")
+            .andWhere(`${distExpr} <= :radius`)
+            .setParameters({
+                lat: latitude,
+                lng: longitude,
+                radius: radius
+            })
+            .orderBy("distance_km", "ASC")
+
+        const users = await qb.getRawMany();
+
+        return users;
+    } catch (error) {
+        console.error("Error fetching nearby users:", error);
+        throw new Error("Failed to fetch nearby users");
+    }
+};
+
+export const createProducerOffer = async (data: createOfferInput) => {
+    const producer = await ProducerRepository.findOneBy({ id: data.producerId });
+    if (!producer) throw new NotFoundError("Producer not found");
+
+    const now = new Date();
+    const scheduledAt = data.scheduledAt ? new Date(data.scheduledAt) : now;
+    const expiresAt = new Date(scheduledAt.getTime() + data.validityMinutes * 60 * 1000);
+
+    const offer = ProducerOfferRepository.create({
+        producer,
+        producerId: producer.id,
+        title: data.title,
+        message: data.message,
+        discountPercent: data.discountPercent,
+        validityMinutes: data.validityMinutes,
+        maxRecipients: data.maxRecipients,
+        radiusMeters: data.radiusMeters,
+        imageUrl: data.imageUrl,
+        scheduledAt,
+        expiresAt,
+        status: data.scheduledAt ? OfferStatus.DRAFT : OfferStatus.ACTIVE,
+    });
+
+    await ProducerOfferRepository.save(offer);
+    return offer;
 };
 
 export const getProducerDetails = async (id: number) => {
