@@ -103,7 +103,7 @@ export const setServiceType = async (req: Request, res: Response, next: NextFunc
         const { producerId, serviceTypeIds } = setServiceTypeSchema.parse(req.body);
 
         const result = await ScrapperService.setServiceType({
-            producerId: Number(producerId),
+            producerId,
             serviceTypeIds,
         });
 

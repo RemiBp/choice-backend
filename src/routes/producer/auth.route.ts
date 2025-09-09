@@ -13,6 +13,7 @@ ProducerAuthRouter.post('/createProducer', AuthController.createProducer);
 ProducerAuthRouter.post('/register', AuthController.register);
 ProducerAuthRouter.post('/login', AuthController.login);
 ProducerAuthRouter.post('/verifyOtp', AuthController.verifyOtp);
+ProducerAuthRouter.post('/switchProfile', authenticateJWT, AuthController.switchProfile );
 ProducerAuthRouter.post('/saveDocument', authenticateJWT, AuthController.saveDocument);
 ProducerAuthRouter.post('/getPreSignedUrl', authenticateBothJWT, AuthController.getPreSignedUrl);
 ProducerAuthRouter.post('/submitDocuments', authenticateJWT, AuthController.submitDocuments);

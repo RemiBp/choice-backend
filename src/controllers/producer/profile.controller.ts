@@ -669,7 +669,4 @@ export const addMenuDish = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-
-
-
 export * as ProfileController from './profile.controller';

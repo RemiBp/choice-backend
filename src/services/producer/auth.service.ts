@@ -360,6 +360,52 @@ export const verifyOtp = async (verifyOtpObject: VerifyOtpSchema) => {
   }
 };
 
+export const switchProfile = async (userId: number) => {
+  const user = await UserRepository.findOne({
+    where: { id: userId },
+    relations: ["role", "producer"],
+  });
+
+  if (!user) throw new NotFoundError("User not found");
+
+  if (!user.producer) {
+    throw new BadRequestError("Only producers can switch profiles");
+  }
+
+  let newRoleName: string;
+
+  if (businessRoles.includes(user.role.name as any)) {
+    // currently in producer role → switch to user
+    newRoleName = "user";
+  } else if (user.role.name === "user") {
+    // currently in user role → switch back to producer type
+    newRoleName = user.producer.type;
+  } else {
+    throw new BadRequestError("Invalid role for switching");
+  }
+
+  const roleEntity = await RolesRepository.findOne({
+    where: { name: newRoleName },
+  });
+  if (!roleEntity) throw new NotFoundError("Role not found");
+
+  user.role = roleEntity;
+  await UserRepository.save(user);
+
+  const accessToken = generateAccessToken(user.id, user.role, user.isActive);
+  const refreshToken = generateRefreshToken(user.id, user.role, user.isActive);
+
+  const { Password, producer, ...safeUser } = user;
+
+  return {
+    message: `Switched to ${newRoleName} profile successfully`,
+    currentProfile: newRoleName,
+    user: safeUser,
+    accessToken,
+    refreshToken,
+  };
+};
+
 export const saveDocument = async (userId: number, document: ProducerDocumentInput) => {
   const producer = await ProducerRepository.findOne({
     where: { user: { id: userId } },

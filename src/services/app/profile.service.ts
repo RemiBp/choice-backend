@@ -1,5 +1,6 @@
 import { AccountDeleteSchema, PreSignedURL, UpdateProfileSchema } from '../../validators/app/user.profile.validation';
 import {
+  BlockRepository,
   BookingRepository,
   DeletedUsersRepository,
   DeleteReasonRepository,
@@ -17,6 +18,7 @@ import s3Service from '../s3.service';
 import { BadRequestError } from '../../errors/badRequest.error';
 import { NotFoundError } from '../../errors/notFound.error';
 import { In } from 'typeorm';
+import Block from '../../models/Block';
 
 export const updateProfile = async (userId: number, updateProfileObject: UpdateProfileSchema) => {
   try {
@@ -59,6 +61,52 @@ export const getProfile = async (userId: number) => {
     console.error('Error in getProfile', { error });
     throw error;
   }
+};
+
+export const searchUsers = async (userId: number, query: string) => {
+  const qb = UserRepository.createQueryBuilder("user")
+    .where("user.id != :userId", { userId });
+
+  if (query && query.trim() !== "") {
+    qb.andWhere("user.userName ILIKE :query", { query: `%${query}%` });
+  }
+
+  // Exclude blocked users via subquery
+  qb.andWhere(`user.id NOT IN (
+      SELECT CASE
+        WHEN b."blockerId" = :userId THEN b."blockedUserId"
+        ELSE b."blockerId"
+      END
+      FROM "Blocks" b
+      WHERE b."blockerId" = :userId OR b."blockedUserId" = :userId
+    )`, { userId });
+
+  return qb.limit(20).getMany();
+};
+
+export const getUserDetailById = async (userId: number) => {
+  const user = await UserRepository.findOne({
+    where: { id: userId },
+    relations: [
+      "posts",
+      "posts.images",
+      "posts.comments",
+      "posts.likes",
+      "postLikes",
+      "postComments",
+      "postShares",
+      "follows",          // following
+      "followedByUsers",  // followers
+      "blockedUsers",
+      "blockedBy",
+    ],
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  return user;
 };
 
 export const getPreSignedUrlForProfileImage = async (userId: number, getPreSignedURLObject: PreSignedURL) => {

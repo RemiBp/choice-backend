@@ -8,8 +8,10 @@ import {
     ManyToOne,
     JoinColumn,
     Index,
+    OneToMany,
 } from 'typeorm';
 import User from './User';
+import Report from './Report';
 
 @Entity('PostComments')
 export default class PostComment {
@@ -32,6 +34,9 @@ export default class PostComment {
     @ManyToOne('Post', 'comments', { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'postId' })
     post: any;
+
+    @OneToMany(() => Report, (report) => report.reportedPost, { cascade: true })
+    reports: Report[];
 
     @CreateDateColumn({ type: 'timestamptz' })
     createdAt: Date;

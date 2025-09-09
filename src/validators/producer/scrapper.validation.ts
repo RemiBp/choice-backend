@@ -40,8 +40,8 @@ export type LeisureAIRatingInput = z.infer<typeof LeisureAIRatingSchema>;
 export type WellnessAIRatingInput = z.infer<typeof WellnessAIRatingSchema>;
 
 export const setServiceTypeSchema = z.object({
-  producerId: z.number().int().positive(),
-  serviceTypeIds: z.array(z.number().int().positive()).nonempty(),
+ producerId: z.coerce.number().int().positive(),
+  serviceTypeIds: z.array(z.coerce.number().int().positive()).nonempty(),
 });
 
 export type SetServiceTypeInput = z.infer<typeof setServiceTypeSchema>;

@@ -87,6 +87,21 @@ export const createProducerPostSchema = z.object({
 
 export type CreateProducerPostInput = z.infer<typeof createProducerPostSchema>;
 
+export const SearchUsersSchema = z.object({
+  query: z.string().min(1, "Search query is required"),
+});
+
+export type SearchUsersInput = z.infer<typeof SearchUsersSchema>;
+
+export const GetUserDetailSchema = z.object({
+  userId: z
+    .string()
+    .regex(/^\d+$/, "User ID must be a valid number")
+    .transform(Number),
+});
+
+export type GetUserDetailInput = z.infer<typeof GetUserDetailSchema>;
+
 export const RestaurantRatingSchema = z.object({
   producerType: z.literal('restaurant'),
   comment: z.string().optional(),

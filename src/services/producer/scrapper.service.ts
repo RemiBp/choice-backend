@@ -4,6 +4,9 @@ import { BadRequestError } from '../../errors/badRequest.error';
 import { NotFoundError } from '../../errors/notFound.error';
 import { PhotoRepository, ProducerRepository, WellnessRepository, WellnessServiceRepository, WellnessServiceTypeRepository } from '../../repositories';
 import s3Service from '../s3.service';
+import { SetServiceTypeInput } from '../../validators/producer/scrapper.validation';
+import WellnessServiceType from '../../models/WellnessServiceTypes';
+import WellnessService from '../../models/WellnessServices';
 
 export const getPreSignedUrl = async (input: {
   fileName: string;
@@ -40,7 +43,7 @@ export const setGalleryImages = async (producerId: number, images: { url: string
   };
 };
 
-export const setServiceType = async (input: { producerId: number; serviceTypeIds: number[] }) => {
+export const setServiceType = async (input: SetServiceTypeInput) => {
   const { producerId, serviceTypeIds } = input;
 
   // 1. Find producer
@@ -60,8 +63,12 @@ export const setServiceType = async (input: { producerId: number; serviceTypeIds
   }
 
   // 3. Get already selected serviceTypeIds
+  // const existingIds = (wellness.selectedServices ?? []).map(
+  //   (s: any) => s.serviceType.id
+  // );
+
   const existingIds = (wellness.selectedServices ?? []).map(
-    (s: any) => s.serviceType.id
+    (s: WellnessService) => s.serviceType.id
   );
 
   // 4. Filter out duplicates
@@ -80,8 +87,12 @@ export const setServiceType = async (input: { producerId: number; serviceTypeIds
   }
 
   // 6. Save only new ones
+  // const saved = await WellnessServiceRepository.save(
+  //   validTypes.map((type: any) => ({ wellness, serviceType: type }))
+  // );
+
   const saved = await WellnessServiceRepository.save(
-    validTypes.map((type: any) => ({ wellness, serviceType: type }))
+    validTypes.map((type: WellnessServiceType) => ({ wellness, serviceType: type }))
   );
 
   // 7. Merge and return updated services

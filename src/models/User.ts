@@ -39,6 +39,8 @@ import DishRating from './DishRating';
 import ChatMember from './ChatMember';
 import Message from './Message';
 import Chat from './Chat';
+import Block from './Block';
+import Report from './Report';
 
 @Entity('Users')
 export default class User {
@@ -99,7 +101,7 @@ export default class User {
   @OneToMany(() => EventRating, rating => rating.user)
   eventRatings: EventRating[];
 
-   @OneToMany(() => ChatMember, (chatMember) => chatMember.user)
+  @OneToMany(() => ChatMember, (chatMember) => chatMember.user)
   chatMemberships: ChatMember[];
 
   @OneToMany(() => Message, (message) => message.sender)
@@ -147,6 +149,18 @@ export default class User {
 
   @OneToMany(() => RestaurantPaymentMethods, paymentMethods => paymentMethods.user, { cascade: true })
   paymentMethods: RestaurantPaymentMethods[];
+
+  @OneToMany(() => Block, (block) => block.blocker, { cascade: true })
+  blockedUsers: Block[];
+
+  @OneToMany(() => Block, (block) => block.blockedUser, { cascade: true })
+  blockedBy: Block[];
+
+  @OneToMany(() => Report, (report) => report.reporter)
+  reportsMade: Report[];
+
+  @OneToMany(() => Report, (report) => report.reportedUser)
+  reportsReceived: Report[];
 
   // Social Module Relations
   @OneToMany(() => Post, post => post.user, { cascade: true })

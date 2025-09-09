@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { PostController } from '../../controllers/producer/post.controller';
 import { authenticateJWTForBooking, checkStatus, checkPostCreationPermission, validatePostTypeByRole } from '../../middlewares/post.auth.middleware';
 import Producer from '../../models/Producer';
+import { attachBlockedUsers } from '../../middlewares/block.middleware';
 
 const ProducerPostRouter = Router();
 ProducerPostRouter.get('/', (req, res) => {
@@ -10,6 +11,7 @@ ProducerPostRouter.get('/', (req, res) => {
 
 ProducerPostRouter.use(authenticateJWTForBooking);
 ProducerPostRouter.use(checkStatus);
+ProducerPostRouter.use(attachBlockedUsers);
 // ProducerPostRouter.use(checkPostCreationPermission);
 
 ProducerPostRouter.get('/getProducerPlaces', PostController.getProducerPlaces);
@@ -36,5 +38,6 @@ ProducerPostRouter.post('/sharePost/:postId', PostController.sharePost);
 ProducerPostRouter.get('/getPostStatistics/:postId', PostController.getPostStatistics);
 ProducerPostRouter.post('/toggleFollowProducer', PostController.toggleFollowProducer);
 ProducerPostRouter.post('/approvedRequest/:followId', PostController.approvedRequest);
+ProducerPostRouter.get('/getFollowingRequest', PostController.getFollowingRequest);
 
 export default ProducerPostRouter;

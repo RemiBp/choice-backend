@@ -344,4 +344,14 @@ export const approvedRequest = async (req: Request, res: Response, next: NextFun
     }
 };
 
+export const getFollowingRequest = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        const result = await PostService.getFollowingRequest(userId);
+        return sendApiResponse(res, 200, 'Following requests retrieved successfully', result);
+    } catch (error) {
+        next(error);
+    }
+};
+
 export * as PostController from './post.controller';

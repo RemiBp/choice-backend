@@ -6,6 +6,8 @@ import {
 } from '../../validators/app/user.profile.validation';
 import { ProfileService } from '../../services/app/profile.service';
 import { BadRequestError } from '../../errors/badRequest.error';
+import { GetUserDetailSchema, SearchUsersSchema } from '../../validators/producer/post.validation';
+import { sendApiResponse } from '../../utils/sendApiResponse';
 
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -23,6 +25,30 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
     const userId = Number(req.userId);
     const response = await ProfileService.getProfile(userId);
     res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const searchUsers = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    const { query } = SearchUsersSchema.parse(req.query);
+
+    const users = await ProfileService.searchUsers(userId, query);
+    return sendApiResponse(res, 200, "Users fetched successfully", users);
+  } catch (error) {
+    console.error("Error in searchUsers controller:", error);
+    next(error);
+  }
+};
+
+export const getUserDetail = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = GetUserDetailSchema.parse(req.params);
+
+    const user = await ProfileService.getUserDetailById(userId);
+    return sendApiResponse(res, 200, "User fetched successfully", user);
   } catch (error) {
     next(error);
   }
