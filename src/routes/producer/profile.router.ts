@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ProfileController } from '../../controllers/producer/profile.controller';
 import { authenticateBothJWT, authenticateJWT, checkStatus } from '../../middlewares/auth.middleware';
+import Producer from '../../models/Producer';
 
 const ProducerProfileRouter = Router();
 ProducerProfileRouter.get('/', (req, res) => {
@@ -58,5 +59,9 @@ ProducerProfileRouter.post("/addMenuCategory", ProfileController.addMenuCategory
 ProducerProfileRouter.get("/getMenuCategories", ProfileController.getMenuCategories);
 ProducerProfileRouter.post("/addMenuDish", ProfileController.addMenuDish);
 ProducerProfileRouter.get("/getMenu", ProfileController.getMenu);
+ProducerProfileRouter.get("/getCuisineTypes", ProfileController.getCuisineTypes);
+ProducerProfileRouter.get("/getCuisineType/:id", ProfileController.getCuisineType);
+ProducerProfileRouter.post("/setCuisineType", ProfileController.setCuisineType);
+
 
 export default ProducerProfileRouter;
