@@ -9,6 +9,7 @@ ProducerProfileRouter.get('/', (req, res) => {
 });
 
 ProducerProfileRouter.get('/getAllServiceType', authenticateBothJWT, ProfileController.getAllServiceType);
+ProducerProfileRouter.get("/getCuisineTypes", ProfileController.getCuisineTypes);
 
 ProducerProfileRouter.use(authenticateJWT);
 ProducerProfileRouter.use(checkStatus);
@@ -59,7 +60,7 @@ ProducerProfileRouter.post("/addMenuCategory", ProfileController.addMenuCategory
 ProducerProfileRouter.get("/getMenuCategories", ProfileController.getMenuCategories);
 ProducerProfileRouter.post("/addMenuDish", ProfileController.addMenuDish);
 ProducerProfileRouter.get("/getMenu", ProfileController.getMenu);
-ProducerProfileRouter.get("/getCuisineTypes", ProfileController.getCuisineTypes);
+
 ProducerProfileRouter.get("/getCuisineType/:id", ProfileController.getCuisineType);
 ProducerProfileRouter.post("/setCuisineType", ProfileController.setCuisineType);
 
