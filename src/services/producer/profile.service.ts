@@ -142,6 +142,7 @@ export const getProfile = async (userId: number) => {
     isVerified: user.isVerified,
     businessProfile: user.businessProfile ? mapBusinessProfile(user.businessProfile) : null,
     producer: user.producer ? mapProducer(user.producer) : null,
+    cuisineType: user.producer ? user.producer.cuisineType : null,
   };
 };
 
