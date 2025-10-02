@@ -93,13 +93,16 @@ export default class User {
   @ManyToOne(() => Roles, (role: Roles) => role.users)
   role: Roles;
 
+  @Column({ nullable: true })
+  profileImageUrl: string;
+
   @OneToMany(() => ServiceRating, rating => rating.user)
   serviceRatings: ServiceRating[];
 
   @OneToMany(() => EventRating, rating => rating.user)
   eventRatings: EventRating[];
 
-   @OneToMany(() => ChatMember, (chatMember) => chatMember.user)
+  @OneToMany(() => ChatMember, (chatMember) => chatMember.user)
   chatMemberships: ChatMember[];
 
   @OneToMany(() => Message, (message) => message.sender)

@@ -20,30 +20,19 @@ import { In } from 'typeorm';
 
 export const updateProfile = async (userId: number, updateProfileObject: UpdateProfileSchema) => {
   try {
-    const { fullName, profilePicture, email, phoneNumber, userName, bio, latitude, longitude } = updateProfileObject;
-
-    const user = await UserRepository.findOne({
-      where: { id: userId },
-    });
+    const user = await UserRepository.findOne({ where: { id: userId } });
 
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
-    user.fullName = fullName;
-    user.profilePicture = profilePicture;
-    user.email = email;
-    user.phoneNumber = phoneNumber;
-    user.userName = userName;
-    user.bio = bio;
-    user.latitude = latitude;
-    user.longitude = longitude;
+    Object.assign(user, updateProfileObject);
 
     await UserRepository.save(user);
 
-    return { message: 'Profile updated successfully' };
+    return { message: "Profile updated successfully" };
   } catch (error) {
-    console.error('Error in updateProfile', { error });
+    console.error("Error in updateProfile", { error });
     throw error;
   }
 };
