@@ -8,6 +8,7 @@ BookMarkRouter.use(authenticateUserJWT);
 BookMarkRouter.use(checkStatus);
 
 BookMarkRouter.post("/toggleBookmark", BookmarkController.toggleBookmark);
-BookMarkRouter.get("/myBookmark", BookmarkController.getUserBookmarks);
+BookMarkRouter.get("/myBookmark/posts", BookmarkController.getBookmarkedPosts);
+BookMarkRouter.get("/myBookmark/producers", BookmarkController.getBookmarkedProducers);
 
 export default BookMarkRouter;
