@@ -301,6 +301,65 @@ export const getPosts = async (userId: number, roleName: string) => {
     return posts;
 };
 
+export const getMyPosts = async (userId: number, roleName: string) => {
+    if (roleName === RoleName.USER) {
+        const posts = await PostRepository.find({
+            where: { userId },
+            relations: [
+                "images",
+                "producer",
+                "user",
+            ],
+            order: { createdAt: "DESC" },
+        });
+
+        return posts.map((post: any) => ({
+            ...post,
+            user: {
+                id: post.user?.id,
+                userName: post.user?.userName,
+                profileImageUrl: post.user?.profileImageUrl,
+                followersCount: post.user?.followersCount,
+                followingCount: post.user?.followingCount,
+            },
+        }));
+    }
+
+    if (Object.values(BusinessRole).includes(roleName as BusinessRole)) {
+        const producer = await ProducerRepository.findOne({
+            where: { userId },
+            relations: ["user"],
+        });
+
+        if (!producer) {
+            throw new NotFoundError("Producer profile not found for this user");
+        }
+
+        const posts = await PostRepository.find({
+            where: { producerId: producer.id },
+            relations: [
+                "images",
+                "producer",
+                "user",
+            ],
+            order: { createdAt: "DESC" },
+        });
+
+        return posts.map((post: any) => ({
+            ...post,
+            user: {
+                id: post.user?.id,
+                userName: post.user?.userName,
+                profileImageUrl: post.user?.profileImageUrl,
+                followersCount: post.user?.followersCount,
+                followingCount: post.user?.followingCount,
+            },
+        }));
+    }
+
+    throw new BadRequestError("Invalid role for fetching posts");
+};
+
 export const getUserPostById = async (userId: number, postId: number) => {
     const post = await PostRepository.findOne({
         where: { id: postId, userId },

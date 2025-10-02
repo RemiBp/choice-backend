@@ -71,6 +71,17 @@ export const getPosts = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
+export const getMyPosts = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        const roleName = req.roleName;
+        const posts = await PostService.getMyPosts(userId, roleName);
+        return sendApiResponse(res, 200, 'My posts retrieved successfully.', posts);
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const getUserPostById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
@@ -176,7 +187,7 @@ export const getDishRatings = async (req: Request, res: Response, next: NextFunc
     }
 };
 
-export const createEventRatings = async (req: Request,res: Response,next: NextFunction) => {
+export const createEventRatings = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.userId;
         const validated = CreateEventRatingsSchema.parse(req.body);

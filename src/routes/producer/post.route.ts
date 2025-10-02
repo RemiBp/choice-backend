@@ -17,6 +17,7 @@ ProducerPostRouter.post('/createProducerPost', validatePostTypeByRole, PostContr
 ProducerPostRouter.get('/getPostsByProducer', PostController.getPostsByProducer);
 ProducerPostRouter.post('/createUserPost', checkPostCreationPermission, PostController.createUserPost);
 ProducerPostRouter.get('/getUserPosts', PostController.getPosts);
+ProducerPostRouter.get('/getMyPosts', PostController.getMyPosts);
 ProducerPostRouter.get('/getUserPostById/:postId', PostController.getUserPostById);
 ProducerPostRouter.get('/getProducerPostById/:postId', PostController.getProducerPostById);
 ProducerPostRouter.put('/updatePost/:postId', PostController.updatePost);
