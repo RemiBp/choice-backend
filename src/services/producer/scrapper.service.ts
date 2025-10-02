@@ -4,7 +4,7 @@ import { BadRequestError } from '../../errors/badRequest.error';
 import { NotFoundError } from '../../errors/notFound.error';
 import { PhotoRepository, ProducerRepository, WellnessRepository, WellnessServiceRepository, WellnessServiceTypeRepository } from '../../repositories';
 import s3Service from '../s3.service';
-import { SetServiceTypeInput } from '../../validators/producer/scrapper.validation';
+import { SetGalleryImagesInput, SetServiceTypeInput } from '../../validators/producer/scrapper.validation';
 import WellnessServiceType from '../../models/WellnessServiceTypes';
 import WellnessService from '../../models/WellnessServices';
 
@@ -25,14 +25,16 @@ export const getPreSignedUrl = async (input: {
   return { url, keyName };
 };
 
-export const setGalleryImages = async (producerId: number, images: { url: string }[]) => {
+export const setGalleryImages = async (data: SetGalleryImagesInput) => {
+  const { producerId, images } = data;
+
   const producer = await ProducerRepository.findOne({ where: { id: producerId } });
   if (!producer) {
     throw new NotFoundError("Producer not found");
   }
 
-  for (const img of images) {
-    (img as any).producer = producer;
+  for (const image of images) {
+    Object.assign(image, { producer });
   }
 
   await PhotoRepository.save(images);

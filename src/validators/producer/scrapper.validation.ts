@@ -67,3 +67,14 @@ export const EventRatingSchema = z.object({
 export type EventRatingInput = z.infer<typeof EventRatingSchema>;
 
 export type SetServiceTypeInput = z.infer<typeof setServiceTypeSchema>;
+
+export const SetGalleryImagesSchema = z.object({
+  producerId: z.number().int().positive({ message: "producerId must be a positive integer" }),
+  images: z.array(
+    z.object({
+      url: z.string().url({ message: "Each image must be a valid URL" }),
+    })
+  ).min(1, { message: "At least one image is required" }),
+});
+
+export type SetGalleryImagesInput = z.infer<typeof SetGalleryImagesSchema>;

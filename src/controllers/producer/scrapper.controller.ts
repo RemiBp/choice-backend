@@ -6,7 +6,7 @@ import { z } from "zod";
 import { BadRequestError } from "../../errors/badRequest.error";
 import { ScrapperService } from "../../services/producer/scrapper.service";
 import { presignedURLSchema } from "../../validators/producer/profile.validation";
-import { EventRatingSchema, LeisureAIRatingSchema, MenuRatingSchema, RestaurantAIRatingSchema, ServiceRatingSchema, WellnessAIRatingSchema, setServiceTypeSchema } from "../../validators/producer/scrapper.validation";
+import { EventRatingSchema, LeisureAIRatingSchema, MenuRatingSchema, RestaurantAIRatingSchema, ServiceRatingSchema, SetGalleryImagesSchema, WellnessAIRatingSchema, setServiceTypeSchema } from "../../validators/producer/scrapper.validation";
 
 
 export const saveRestaurantAIRating = async (req: Request, res: Response, next: NextFunction) => {
@@ -81,18 +81,11 @@ export const getPreSignedUrl = async (req: Request, res: Response, next: NextFun
 
 export const setGalleryImages = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { producerId, images } = req.body;
+        const parsed = SetGalleryImagesSchema.parse(req.body);
 
-        if (!producerId) {
-            throw new BadRequestError("producerId is required");
-        }
-        if (!images || !Array.isArray(images) || images.length === 0) {
-            throw new BadRequestError("images array is required");
-        }
+        await ScrapperService.setGalleryImages(parsed);
 
-        await ScrapperService.setGalleryImages(Number(producerId), images);
-
-        res.status(200).json({ message: "Gallery images saved successfully" });
+        return res.status(200).json({ message: "Gallery images saved successfully" });
     } catch (error) {
         next(error);
     }
