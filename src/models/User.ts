@@ -39,6 +39,7 @@ import DishRating from './DishRating';
 import ChatMember from './ChatMember';
 import Message from './Message';
 import Chat from './Chat';
+import Interest from './Interest';
 
 @Entity('Users')
 export default class User {
@@ -166,6 +167,9 @@ export default class User {
 
   @OneToMany(() => PostTag, tag => tag.user, { cascade: true })
   postTags: PostTag[];
+
+  @OneToMany(() => Interest, (interest) => interest.user)
+  interests: Interest[];
 
   @OneToMany(() => PostEmotion, emotion => emotion.user, { cascade: true })
   postEmotions: PostEmotion[];

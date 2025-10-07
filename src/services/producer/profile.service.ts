@@ -593,7 +593,7 @@ export const setOperationalHours = async (input: SetOperationHoursSchema) => {
       }
     }
     //if (restaurant.slotDuration) {
-    setImmediate(() => generateSlotsForRestaurant(restaurantId));
+    // setImmediate(() => generateSlotsForRestaurant(restaurantId));
     //}
 
 
@@ -664,15 +664,20 @@ export const setCapacity = async (input: SetCapacitySchema & { userId: number })
 
 export const setSlotDuration = async (restaurantId: number, slotDuration: number) => {
   try {
-    const restaurant = await RestaurantRepository.findOne({
-      where: { user: { id: restaurantId } },
+    const user = await UserRepository.findOne({
+      where: { id: restaurantId },
+      relations: ['producer'],
     });
-    if (!restaurant) {
+    if (!user) {
       throw new NotFoundError('Restaurant not found');
     }
-    restaurant.slotDuration = slotDuration;
-    await RestaurantRepository.save(restaurant);
-    setImmediate(() => generateSlotsForRestaurant(restaurantId));
+    const producer = await ProducerRepository.findOne({
+      where: { user: { id: restaurantId } },
+    });
+
+    producer.slotDuration = slotDuration;
+    await ProducerRepository.save(producer);
+    setImmediate(() => generateSlotsForProducer(restaurantId));
     return { message: 'Slot duration set successfully' };
   } catch (error) {
     throw error;
@@ -681,14 +686,14 @@ export const setSlotDuration = async (restaurantId: number, slotDuration: number
 
 export const getSlotDuration = async (restaurantId: number) => {
   try {
-    const restaurant = await RestaurantRepository.findOne({
-      where: { user: { id: restaurantId } },
-      relations: ['user'],
+    const user = await UserRepository.findOne({
+      where: { id: restaurantId },
+      relations: ['producer'],
     });
-    if (!restaurant) {
+    if (!user) {
       throw new NotFoundError('Restaurant not found');
     }
-    return { slotDuration: restaurant.slotDuration };
+    return { slotDuration: user.producer.slotDuration };
   } catch (error) {
     throw error;
   }
@@ -788,31 +793,35 @@ export const addUnavailableSlot = async (restaurantId: number, slotIds: number[]
 
 const restaurantLocks = new Map<number, boolean>();
 
-export const generateSlotsForRestaurant = async (restaurantId: number) => {
-  if (restaurantLocks.get(restaurantId)) {
-    console.log(`Slot generation already in progress for restaurant ${restaurantId}`);
+export const generateSlotsForProducer = async (producerId: number) => {
+  if (restaurantLocks.get(producerId)) {
+    console.log(`Slot generation already in progress for restaurant ${producerId}`);
     return;
   }
-  restaurantLocks.set(restaurantId, true);
+  restaurantLocks.set(producerId, true);
 
   try {
-    console.log(`🔧 [Service] Generating slots for restaurant ${restaurantId}`);
-    const restaurant = await UserRepository.findOne({
-      where: { id: restaurantId },
-      relations: ['restaurant'],
+    console.log(`🔧 [Service] Generating slots for restaurant ${producerId}`);
+    const user = await UserRepository.findOne({
+      where: { id: producerId },
+      relations: ['producer'],
     });
 
-    if (!restaurant) {
-      throw new Error('Restaurant not found');
+    if (!user) {
+      throw new Error('user not found');
     }
 
-    console.log(`Fetching operational hours for ${restaurantId}`);
+    console.log(`Fetching operational hours for ${producerId}`);
     const operationalHours = await OperationalHourRepository.find({
-      where: { user: { id: restaurantId }, isClosed: false },
+      where: { user: { id: producerId }, isClosed: false },
     });
-    await UnavailableSlotRepository.delete({ userId: restaurantId });
-    await SlotRepository.delete({ userId: restaurantId });
-    const slotDuration = 1
+    await UnavailableSlotRepository.delete({ userId: producerId });
+    await SlotRepository.delete({ userId: producerId });
+    const slotDuration = user.producer?.slotDuration;
+    if (!slotDuration) {
+      console.log('Slot duration not set, skipping slot generation');
+      return;
+    }
     console.log('slotDuration', slotDuration);
     for (const hour of operationalHours) {
       const { day, startTime, endTime } = hour;
@@ -827,7 +836,7 @@ export const generateSlotsForRestaurant = async (restaurantId: number) => {
           day,
           startTime: slot.startTime,
           endTime: slot.endTime,
-          userId: restaurantId,
+          userId: producerId,
         });
 
         try {
@@ -838,8 +847,8 @@ export const generateSlotsForRestaurant = async (restaurantId: number) => {
       }
     }
   } finally {
-    restaurantLocks.set(restaurantId, false);
-    console.log(`Slot generation completed for restaurant ${restaurantId}`);
+    restaurantLocks.set(producerId, false);
+    console.log(`Slot generation completed for restaurant ${producerId}`);
   }
 };
 
@@ -893,11 +902,11 @@ export const getOperationalHours = async (restaurantId: number) => {
 //   }
 // };
 
-export const getRestaurantSlots = async (restaurantId: number) => {
+export const getProducerSlots = async (producerId: number) => {
   try {
     const slots = await SlotRepository.createQueryBuilder('slot')
       .innerJoin('slot.user', 'user')
-      .where('user.id = :restaurantId', { restaurantId })
+      .where('user.id = :producerId', { producerId })
       .orderBy(
         `
         CASE 
@@ -936,7 +945,7 @@ export const getRestaurantSlots = async (restaurantId: number) => {
 
     return response;
   } catch (error) {
-    console.error('Error in getRestaurantSlots', { error }, 'BookingService');
+    console.error('Error in getProducerSlots', { error }, 'BookingService');
     throw error;
   }
 };
@@ -1885,9 +1894,9 @@ export const getMenu = async (userId: number) => {
   }
 };
 
-export const getCuisineTypes =  async ( page : number, limit : number) => {
+export const getCuisineTypes = async (page: number, limit: number) => {
   try {
-    const [ cuisineTypes, count ] = await CuisineTypeRepository.findAndCount(
+    const [cuisineTypes, count] = await CuisineTypeRepository.findAndCount(
       {
         where: {
           isActive: true,
@@ -1908,9 +1917,9 @@ export const getCuisineTypes =  async ( page : number, limit : number) => {
   }
 };
 
-export const getCuisineType = async (cuisineTypeId : number) => {
+export const getCuisineType = async (cuisineTypeId: number) => {
   try {
-    const cuisineType = await CuisineTypeRepository.findOne({ 
+    const cuisineType = await CuisineTypeRepository.findOne({
       where: { id: cuisineTypeId },
     });
     if (!cuisineType) {
@@ -1925,7 +1934,7 @@ export const getCuisineType = async (cuisineTypeId : number) => {
 };
 
 
-export const setCuisineType = async (userId : number, cuisineTypeId : number) => {
+export const setCuisineType = async (userId: number, cuisineTypeId: number) => {
   try {
     const user = await UserRepository.findOne({
       where: { id: userId },
@@ -1937,7 +1946,7 @@ export const setCuisineType = async (userId : number, cuisineTypeId : number) =>
     })
     if (!user || !user.producer) {
       throw new NotFoundError('producer not found for this user');
-    } 
+    }
     producer.cuisineType = cuisineTypeId;
     await ProducerRepository.save(producer);
     return {

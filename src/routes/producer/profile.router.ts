@@ -23,6 +23,7 @@ ProducerProfileRouter.post('/setServiceType', ProfileController.setServiceType);
 ProducerProfileRouter.get('/getServiceType', ProfileController.getServiceType);
 ProducerProfileRouter.post('/setGalleryImages', ProfileController.setGalleryImages);
 ProducerProfileRouter.get('/getGalleryImages', ProfileController.getGalleryImages);
+ProducerProfileRouter.post('/generateSlots', ProfileController.generateSlots);
 
 // ProducerProfileRouter.get('/getProfile', ProfileController.getProfile);
 ProducerProfileRouter.post('/getPreSignedUrl', ProfileController.getPreSignedUrl);
@@ -38,7 +39,7 @@ ProducerProfileRouter.post('/addUnavailableSlot', ProfileController.addUnavailab
 ProducerProfileRouter.get('/getUnavailableSlots', ProfileController.getUnavailableSlots);
 
 ProducerProfileRouter.get('/getOperationalHours', ProfileController.getOperationalHours);
-ProducerProfileRouter.get('/getRestaurantSlots', ProfileController.getRestaurantSlots);
+ProducerProfileRouter.get('/getProducerSlots', ProfileController.getProducerSlots);
 ProducerProfileRouter.post('/updateRestaurantSlots', ProfileController.updateRestaurantSlots);
 ProducerProfileRouter.post('/uploadRestaurantImages', ProfileController.uploadRestaurantImages);
 ProducerProfileRouter.put('/setMainImage/:id', ProfileController.setMainImage);

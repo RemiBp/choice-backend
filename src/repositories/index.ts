@@ -38,6 +38,8 @@ import PostShare from '../models/PostShare';
 import PostStatistics from '../models/PostStatistics';
 import Follow from '../models/Follow';
 import ProducerOffer from '../models/ProducerOffer';
+import Interest from '../models/Interest';
+import InterestInvite from '../models/InterestInvite';
 
 import Chat from '../models/Chat';
 import Message from '../models/Message';
@@ -106,6 +108,8 @@ export const EventRatingRepository = PostgresDataSource.getRepository(EventRatin
 export const EventTypeRepository = PostgresDataSource.getRepository(EventType);
 export const WellnessServiceTypeRepository = PostgresDataSource.getRepository(WellnessServiceType);
 export const WellnessServiceRepository = PostgresDataSource.getRepository(WellnessService);
+export const InterestRepository = PostgresDataSource.getRepository(Interest);
+export const InterestInviteRepository = PostgresDataSource.getRepository(InterestInvite);
 
 export const ChatRepository = PostgresDataSource.getRepository(Chat);
 export const MessageRepository = PostgresDataSource.getRepository(Message);
