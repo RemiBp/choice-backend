@@ -40,6 +40,8 @@ import Follow from '../models/Follow';
 import ProducerOffer from '../models/ProducerOffer';
 import Block from '../models/Block';
 import Report from '../models/Report';
+import Interest from '../models/Interest';
+import InterestInvite from '../models/InterestInvite';
 
 import Chat from '../models/Chat';
 import Message from '../models/Message';
@@ -110,6 +112,8 @@ export const WellnessServiceTypeRepository = PostgresDataSource.getRepository(We
 export const WellnessServiceRepository = PostgresDataSource.getRepository(WellnessService);
 export const BlockRepository = PostgresDataSource.getRepository(Block);
 export const ReportRepository = PostgresDataSource.getRepository(Report);
+export const InterestRepository = PostgresDataSource.getRepository(Interest);
+export const InterestInviteRepository = PostgresDataSource.getRepository(InterestInvite);
 
 export const ChatRepository = PostgresDataSource.getRepository(Chat);
 export const MessageRepository = PostgresDataSource.getRepository(Message);
