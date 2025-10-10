@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { AcceptInterestInviteSchema, CreateInterestSchema, DeclineInterestInviteSchema, SuggestNewTimeSchema } from "../../validators/app/interest.validation";
+import { AcceptInterestInviteSchema, CreateInterestSchema, DeclineInterestInviteSchema, EditSlotSchema, ReserveInterestSchema, SuggestNewTimeSchema } from "../../validators/app/interest.validation";
 import { InterestService } from "../../services/app/interest.service";
 import { sendApiResponse } from "../../utils/sendApiResponse";
 
@@ -30,6 +30,19 @@ export const getInvited = async (req: Request, res: Response, next: NextFunction
         const data = await InterestService.getInvited(userId);
 
         return sendApiResponse(res, 200, "Invited interests fetched successfully", data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const invitedDetails = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const interestId = Number(req.params.id);
+        const userId = Number(req.userId);
+
+        const data = await InterestService.invitedDetails(userId, interestId);
+
+        return sendApiResponse(res, 200, "Interest details fetched successfully", data);
     } catch (error) {
         next(error);
     }
@@ -98,6 +111,31 @@ export const respondToInvite = async (req: Request, res: Response, next: NextFun
         const { interestId, response: inviteResponse } = req.body;
         const response = await InterestService.respondToInvite(userId, interestId, inviteResponse);
         sendApiResponse(res, 200, "Invite response recorded successfully", response);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const editInterestSlot = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = Number(req.userId);
+        const parsed = EditSlotSchema.parse(req.body);
+
+        const data = await InterestService.editInterestSlot(userId, parsed);
+
+        return sendApiResponse(res, 200, "New slot suggested successfully", data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const reserveInterest = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = Number(req.userId);
+        const parsedData = ReserveInterestSchema.parse(req.body);
+
+        const data = await InterestService.reserveInterest(userId, parsedData);
+        return sendApiResponse(res, 200, "Interest reserved successfully", data);
     } catch (error) {
         next(error);
     }

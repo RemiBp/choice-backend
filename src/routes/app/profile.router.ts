@@ -18,6 +18,7 @@ UserProfileRouter.get('/getProfile', ProfileController.getProfile);
 UserProfileRouter.get('/searchUsers', attachBlockedUsers, ProfileController.searchUsers);
 UserProfileRouter.get('/getUserDetail/:userId', attachBlockedUsers, ProfileController.getUserDetail);
 UserProfileRouter.delete('/deleteProfile', ProfileController.deleteProfile);
+UserProfileRouter.get('/getMyFriends', ProfileController.getMyFriends);
 
 UserProfileRouter.post('/getPreSignedUrlForProfileImage', ProfileController.getPreSignedUrlForProfileImage);
 UserProfileRouter.post('/changeCurrentPassword', ProfileController.changeCurrentPassword);

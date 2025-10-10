@@ -1227,21 +1227,22 @@ export const getPostStatistics = async (postId: number) => {
 export const toggleFollow = async (userId: number, producerId?: number, followedUserId?: number) => {
     const follower = await UserRepository.findOne({
         where: { id: userId },
-        relations: ['role'],
+        relations: ["role"],
     });
 
-    if (!follower) throw new NotFoundError('Follower user not found');
+    if (!follower) throw new NotFoundError("Follower user not found");
 
     if (follower.role.name !== RoleName.USER) {
-        throw new BadRequestError('Only users can follow others');
+        throw new BadRequestError("Only users can follow others");
     }
 
+    // FOLLOW / UNFOLLOW PRODUCER
     if (producerId) {
         const producer = await ProducerRepository.findOne({
             where: { id: producerId, isDeleted: false },
         });
 
-        if (!producer) throw new NotFoundError('Producer not found');
+        if (!producer) throw new NotFoundError("Producer not found");
 
         const existing = await FollowRepository.findOneBy({
             followerId: userId,
@@ -1249,43 +1250,46 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
         });
 
         if (existing) {
-            await AppDataSource.manager.transaction(async (manager: { delete: (arg0: any, arg1: any) => any; decrement: (arg0: typeof User, arg1: { id: any; }, arg2: string, arg3: number) => any; }) => {
+            await AppDataSource.manager.transaction(async (manager: any) => {
                 await manager.delete(FollowRepository.target, existing.id);
-                await manager.decrement(User, { id: userId }, 'followingCount', 1);
+                await manager.decrement(User, { id: userId }, "followingCount", 1);
 
                 if (existing.status === FollowStatusEnums.Approved && producer.userId) {
-                    await manager.decrement(User, { id: producer.userId }, 'followersCount', 1);
+                    await manager.decrement(User, { id: producer.userId }, "followersCount", 1);
                 }
             });
 
             return {
                 message:
                     existing.status === FollowStatusEnums.Approved
-                        ? 'Unfollowed producer successfully'
-                        : 'Canceled follow request to producer',
+                        ? "Unfollowed producer successfully"
+                        : "Canceled follow request to producer",
                 data: null,
             };
         }
+
         const follow = FollowRepository.create({
             followerId: userId,
             producerId,
             status: FollowStatusEnums.Pending,
         });
 
-        const saved = await AppDataSource.manager.transaction(async (manager: { save: (arg0: any) => any; increment: (arg0: typeof User, arg1: { id: number; }, arg2: string, arg3: number) => any; }) => {
+        const saved = await AppDataSource.manager.transaction(async (manager: any) => {
             const savedFollow = await manager.save(follow);
-            await manager.increment(User, { id: userId }, 'followingCount', 1);
+            await manager.increment(User, { id: userId }, "followingCount", 1);
             return savedFollow;
         });
 
         return {
-            message: 'Follow request sent to producer (pending)',
+            message: "Follow request sent to producer (pending)",
             data: saved,
         };
     }
+
+    // FOLLOW / UNFOLLOW USER
     if (followedUserId) {
         if (userId === followedUserId) {
-            throw new BadRequestError('You cannot follow yourself');
+            throw new BadRequestError("You cannot follow yourself");
         }
 
         const followedUser = await UserRepository.findOneBy({
@@ -1293,51 +1297,66 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
             isDeleted: false,
         });
 
-        if (!followedUser) throw new NotFoundError('User not found');
+        if (!followedUser) throw new NotFoundError("User not found");
 
         const existing = await FollowRepository.findOneBy({
             followerId: userId,
             followedUserId,
         });
 
+        // UNFOLLOW / CANCEL REQUEST
         if (existing) {
-            await AppDataSource.manager.transaction(async (manager: { delete: (arg0: any, arg1: any) => any; decrement: (arg0: typeof User, arg1: { id: number; }, arg2: string, arg3: number) => any; }) => {
+            await AppDataSource.manager.transaction(async (manager: any) => {
                 await manager.delete(FollowRepository.target, existing.id);
-                await manager.decrement(User, { id: userId }, 'followingCount', 1);
+                await manager.decrement(User, { id: userId }, "followingCount", 1);
 
                 if (existing.status === FollowStatusEnums.Approved) {
-                    await manager.decrement(User, { id: followedUserId }, 'followersCount', 1);
+                    await manager.decrement(User, { id: followedUserId }, "followersCount", 1);
+
+                    // delete reverse follow (symmetrical removal)
+                    const reverseFollow = await FollowRepository.findOneBy({
+                        followerId: followedUserId,
+                        followedUserId: userId,
+                    });
+
+                    if (reverseFollow) {
+                        await manager.delete(FollowRepository.target, reverseFollow.id);
+                        // Adjust follower/following counts symmetrically
+                        await manager.decrement(User, { id: followedUserId }, "followingCount", 1);
+                        await manager.decrement(User, { id: userId }, "followersCount", 1);
+                    }
                 }
             });
 
             return {
                 message:
                     existing.status === FollowStatusEnums.Approved
-                        ? 'Unfollowed user successfully'
-                        : 'Canceled follow request to user',
+                        ? "Unfollowed user successfully"
+                        : "Canceled follow request to user",
                 data: null,
             };
         }
 
+        // FOLLOW REQUEST CREATION
         const follow = FollowRepository.create({
             followerId: userId,
             followedUserId,
             status: FollowStatusEnums.Pending,
         });
 
-        const saved = await AppDataSource.manager.transaction(async (manager: { save: (arg0: any) => any; increment: (arg0: typeof User, arg1: { id: number; }, arg2: string, arg3: number) => any; }) => {
+        const saved = await AppDataSource.manager.transaction(async (manager: any) => {
             const savedFollow = await manager.save(follow);
-            await manager.increment(User, { id: userId }, 'followingCount', 1);
+            await manager.increment(User, { id: userId }, "followingCount", 1);
             return savedFollow;
         });
 
         return {
-            message: 'Follow request sent to user (pending)',
+            message: "Follow request sent to user (pending)",
             data: saved,
         };
     }
 
-    throw new BadRequestError('Invalid follow request');
+    throw new BadRequestError("Invalid follow request");
 };
 
 
@@ -1346,62 +1365,83 @@ export const approvedRequest = async (userId: number, followId: number) => {
         where: { id: followId },
     });
 
-    if (!follow) {
-        throw new NotFoundError('Follow request not found');
-    }
+    if (!follow) throw new NotFoundError("Follow request not found");
 
-    if (follow.status === FollowStatusEnums.Approved) {
-        throw new BadRequestError('Request is already approved');
-    }
+    if (follow.status === FollowStatusEnums.Approved)
+        throw new BadRequestError("Request is already approved");
 
+    // Authorization checks
     if (follow.followedUserId && follow.followedUserId !== userId) {
-        throw new BadRequestError('You are not authorized to approve this request');
+        throw new BadRequestError("You are not authorized to approve this request");
     }
 
     if (follow.producerId) {
         const producer = await ProducerRepository.findOneBy({ id: follow.producerId });
         if (!producer || producer.userId !== userId) {
-            throw new BadRequestError('You are not authorized to approve this request');
+            throw new BadRequestError("You are not authorized to approve this request");
         }
     }
 
     follow.status = FollowStatusEnums.Approved;
 
-    await AppDataSource.manager.transaction(async (manager: { save: (arg0: any) => any; increment: (arg0: typeof User, arg1: { id: any; }, arg2: string, arg3: number) => any; }) => {
+    await AppDataSource.manager.transaction(async (manager: any) => {
         await manager.save(follow);
 
+        // Increment follower count for approved connections
         if (follow.followedUserId) {
-            await manager.increment(User, { id: follow.followedUserId }, 'followersCount', 1);
+            await manager.increment(User, { id: follow.followedUserId }, "followersCount", 1);
         }
 
         if (follow.producerId) {
             const producer = await ProducerRepository.findOneBy({ id: follow.producerId });
             if (producer?.userId) {
-                await manager.increment(User, { id: producer.userId }, 'followersCount', 1);
+                await manager.increment(User, { id: producer.userId }, "followersCount", 1);
+            }
+        }
+
+        // auto-create reverse follow for user↔user friendship
+        if (follow.followedUserId && !follow.producerId) {
+            const existingReverse = await FollowRepository.findOneBy({
+                followerId: follow.followedUserId,
+                followedUserId: follow.followerId,
+            });
+
+            if (!existingReverse) {
+                const reverseFollow = FollowRepository.create({
+                    followerId: follow.followedUserId,  // the approver becomes the follower
+                    followedUserId: follow.followerId,  // the requester becomes followed
+                    status: FollowStatusEnums.Approved,
+                });
+
+                await manager.save(reverseFollow);
+
+                // Update counts for mutual relationship
+                await manager.increment(User, { id: follow.followerId }, "followersCount", 1);
+                await manager.increment(User, { id: follow.followedUserId }, "followingCount", 1);
             }
         }
     });
 
     return {
-        message: 'Follow request approved successfully',
+        message: "Follow request approved successfully",
         data: follow,
     };
 };
 
 export const getFollowingRequest = async (userId: number) => {
-  const requests = await FollowRepository.createQueryBuilder('follow')
-    .leftJoinAndSelect('follow.follower', 'follower')
-    .where(
-      `follow.followedUserId = :userId 
+    const requests = await FollowRepository.createQueryBuilder('follow')
+        .leftJoinAndSelect('follow.follower', 'follower')
+        .where(
+            `follow.followedUserId = :userId 
        OR follow.producerId IN (
          SELECT p.id FROM "Producers" p WHERE p."userId" = :userId
        )`,
-      { userId }
-    )
-    .andWhere('follow.status = :status', { status: FollowStatusEnums.Pending })
-    .getMany();
+            { userId }
+        )
+        .andWhere('follow.status = :status', { status: FollowStatusEnums.Pending })
+        .getMany();
 
-  return requests;
+    return requests;
 };
 
 export * as PostService from './post.service';

@@ -37,3 +37,10 @@ export const accountDeleteSchema = z.object({
 export type AccountDeleteSchema = z.infer<typeof accountDeleteSchema>;
 
 export * as ProfileSchema from './user.profile.validation';
+
+export const GetMyFriendsSchema = z.object({
+  page: z.number().int().positive().optional(),
+  limit: z.number().int().positive().optional(),
+});
+
+export type GetMyFriendsInput = z.infer<typeof GetMyFriendsSchema>;

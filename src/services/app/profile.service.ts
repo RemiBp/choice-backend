@@ -5,6 +5,7 @@ import {
   DeletedUsersRepository,
   DeleteReasonRepository,
   FavouriteRestaurantRepository,
+  FollowRepository,
   HelpAndSupportRepository,
   NotificationRepository,
   PasswordRepository,
@@ -20,6 +21,9 @@ import { NotFoundError } from '../../errors/notFound.error';
 import { In } from 'typeorm';
 import Block from '../../models/Block';
 import PostgresDataSource from '../../data-source';
+import { FollowStatusEnums } from '../../enums/followStatus.enum';
+import User from '../../models/User';
+import Follow from '../../models/Follow';
 
 export const updateProfile = async (userId: number, updateProfileObject: UpdateProfileSchema) => {
   try {
@@ -134,6 +138,25 @@ export const deleteProfile = async (userId: number) => {
     return user;
   });
 };
+
+export const getMyFriends = async (userId: number) => {
+  // Fetch all approved follows where user is follower
+  const friends = await FollowRepository.createQueryBuilder("f1")
+    .innerJoinAndSelect("f1.followedUser", "friend")
+    .where("f1.followerId = :userId", { userId })
+    .andWhere("f1.status = :status", { status: FollowStatusEnums.Approved })
+    .andWhere("f1.followedUserId IS NOT NULL") // exclude producers
+    .getMany();
+
+  // Return clean User objects
+  const friendUsers = friends.map((follow: any) => follow.followedUser);
+
+  return {
+    total: friendUsers.length,
+    friends: friendUsers,
+  };
+};
+
 
 export const getPreSignedUrlForProfileImage = async (userId: number, getPreSignedURLObject: PreSignedURL) => {
   try {

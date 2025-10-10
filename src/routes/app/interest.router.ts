@@ -13,6 +13,7 @@ UserInterestRouter.use(checkStatus);
 UserInterestRouter.post('/createInterest', InterestController.createInterest);
 UserInterestRouter.get('/producer-slots/:producerId', InterestController.getProducerSlots);
 UserInterestRouter.get('/getInvited', InterestController.getInvited);
+UserInterestRouter.get('/invitedDetails/:id', InterestController.invitedDetails);
 UserInterestRouter.post('/acceptInterestInvite', InterestController.acceptInterestInvite);
 UserInterestRouter.post('/declineInterestInvite', InterestController.declineInterestInvite);
 UserInterestRouter.post('/suggestNewTime', InterestController.suggestNewTime);
@@ -20,5 +21,7 @@ UserInterestRouter.post('/suggestNewTime', InterestController.suggestNewTime);
 UserInterestRouter.get('/myInterests', InterestController.getUserInterests);
 UserInterestRouter.get('/interestDetails/:interestId', InterestController.getInterestDetails);
 UserInterestRouter.post('/respondToInvite', InterestController.respondToInvite);
+UserInterestRouter.post('/editInterestSlot', InterestController.editInterestSlot);
+UserInterestRouter.post('/reserveInterest', InterestController.reserveInterest);
 
 export default UserInterestRouter;
