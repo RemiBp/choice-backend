@@ -1250,7 +1250,7 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
         });
 
         if (existing) {
-            await AppDataSource.manager.transaction(async (manager: any) => {
+            await AppDataSource.manager.transaction(async (manager: EntityManager) => {
                 await manager.delete(FollowRepository.target, existing.id);
                 await manager.decrement(User, { id: userId }, "followingCount", 1);
 
@@ -1274,7 +1274,7 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
             status: FollowStatusEnums.Pending,
         });
 
-        const saved = await AppDataSource.manager.transaction(async (manager: any) => {
+        const saved = await AppDataSource.manager.transaction(async (manager: EntityManager) => {
             const savedFollow = await manager.save(follow);
             await manager.increment(User, { id: userId }, "followingCount", 1);
             return savedFollow;
@@ -1306,7 +1306,7 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
 
         // UNFOLLOW / CANCEL REQUEST
         if (existing) {
-            await AppDataSource.manager.transaction(async (manager: any) => {
+            await AppDataSource.manager.transaction(async (manager: EntityManager) => {
                 await manager.delete(FollowRepository.target, existing.id);
                 await manager.decrement(User, { id: userId }, "followingCount", 1);
 
@@ -1344,7 +1344,7 @@ export const toggleFollow = async (userId: number, producerId?: number, followed
             status: FollowStatusEnums.Pending,
         });
 
-        const saved = await AppDataSource.manager.transaction(async (manager: any) => {
+        const saved = await AppDataSource.manager.transaction(async (manager: EntityManager) => {
             const savedFollow = await manager.save(follow);
             await manager.increment(User, { id: userId }, "followingCount", 1);
             return savedFollow;
@@ -1384,7 +1384,7 @@ export const approvedRequest = async (userId: number, followId: number) => {
 
     follow.status = FollowStatusEnums.Approved;
 
-    await AppDataSource.manager.transaction(async (manager: any) => {
+    await AppDataSource.manager.transaction(async (manager: EntityManager) => {
         await manager.save(follow);
 
         // Increment follower count for approved connections

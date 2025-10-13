@@ -149,7 +149,7 @@ export const getMyFriends = async (userId: number) => {
     .getMany();
 
   // Return clean User objects
-  const friendUsers = friends.map((follow: any) => follow.followedUser);
+  const friendUsers = friends.map((follow: Follow) => follow.followedUser);
 
   return {
     total: friendUsers.length,

@@ -22,6 +22,9 @@ import { NotificationRepository } from "../../repositories";
 import { NotificationTypeEnums } from "../../enums/notification.type.enum";
 import User from "../../models/User";
 import { NotificationStatusCode } from "../../enums/NotificationStatusCode.enum";
+import InterestInvite from "../../models/InterestInvite";
+import PostgresDataSource from "../../data-source";
+import { BookingStatusEnums } from "../../enums/bookingStatus.enum";
 
 export const createInterest = async (userId: number, data: CreateInterestInput) => {
     const { type, producerId, eventId, slotId, suggestedTime, message, invitedUserIds = [] } = data;
@@ -79,9 +82,9 @@ export const createInterest = async (userId: number, data: CreateInterestInput) 
             }));
             await InterestInviteRepository.insert(invites);
 
-            // Create and send notifications
-            for (const invitedUser of validUsers) {
-                const notificationData = {
+            // Create and save all DB notifications in one go
+            const notifications = validUsers.map((invitedUser: User) =>
+                NotificationRepository.create({
                     sender: { id: creator.id } as User,
                     receiver: { id: invitedUser.id } as User,
                     notificationId: NotificationStatusCode.INTEREST_INVITE,
@@ -89,12 +92,13 @@ export const createInterest = async (userId: number, data: CreateInterestInput) 
                     title: "You’ve been invited!",
                     body: `${creator.fullName} invited you to join an interest.`,
                     purpose: NotificationTypeEnums.INTEREST_INVITE,
-                };
+                })
+            );
 
-                const notification = NotificationRepository.create(notificationData);
-                await NotificationRepository.save(notification);
+            await NotificationRepository.save(notifications);
 
-                // Send FCM notification (if deviceId present)
+            // Send push notifications (FCM) individually
+            for (const invitedUser of validUsers) {
                 if (invitedUser.deviceId) {
                     const notificationPayload = {
                         notificationId: String(NotificationStatusCode.INTEREST_INVITE),
@@ -137,20 +141,21 @@ export const createInterest = async (userId: number, data: CreateInterestInput) 
         const savedInterest = await InterestRepository.save(interest);
 
         if (invitedUserIds.length > 0) {
-            const validUsers = await UserRepository.find({
+            const validUsers: User[] = await UserRepository.find({
                 where: { id: In(invitedUserIds) },
                 select: ["id", "deviceId", "fullName", "profileImageUrl"],
             });
 
-            const invites = validUsers.map((u: any) => ({
+            const invites: Partial<InterestInvite>[] = validUsers.map((u) => ({
                 interestId: savedInterest.id,
                 invitedUserId: u.id,
             }));
+
             await InterestInviteRepository.insert(invites);
 
-            //Create and send notifications
-            for (const invitedUser of validUsers) {
-                const notificationData = {
+            // Create all notification objects first
+            const notifications = validUsers.map((invitedUser: User) =>
+                NotificationRepository.create({
                     sender: { id: creator.id } as User,
                     receiver: { id: invitedUser.id } as User,
                     notificationId: NotificationStatusCode.INTEREST_INVITE,
@@ -158,11 +163,14 @@ export const createInterest = async (userId: number, data: CreateInterestInput) 
                     title: "You’ve been invited!",
                     body: `${creator.fullName} invited you to join an event interest.`,
                     purpose: NotificationTypeEnums.INTEREST_INVITE,
-                };
+                })
+            );
 
-                const notification = NotificationRepository.create(notificationData);
-                await NotificationRepository.save(notification);
+            // Save all notifications at once (single DB query)
+            await NotificationRepository.save(notifications);
 
+            // Send FCM notifications individually (only network I/O per user)
+            for (const invitedUser of validUsers) {
                 if (invitedUser.deviceId) {
                     const notificationPayload = {
                         notificationId: String(NotificationStatusCode.INTEREST_INVITE),
@@ -265,104 +273,104 @@ export const invitedDetails = async (userId: number, interestId: number) => {
 };
 
 export const acceptInterestInvite = async (userId: number, data: AcceptInterestInviteInput) => {
-    try {
-        const { interestId } = data;
+    const { interestId } = data;
 
-        const invite = await InterestInviteRepository.findOne({
-            where: { invitedUserId: userId, interestId },
-            relations: ["interest"],
-        });
+    const invite = await InterestInviteRepository.findOne({
+        where: { invitedUserId: userId, interestId },
+        relations: ["interest"],
+    });
 
-        if (!invite) throw new NotFoundError("Invite not found for this user.");
+    if (!invite) throw new NotFoundError("Invite not found for this user.");
 
-        // Prevent re-accept or accept after decline/suggest
-        if ([InviteStatus.ACCEPTED, InviteStatus.DECLINED, InviteStatus.SUGGESTED_NEW_TIME].includes(invite.status)) {
-            throw new Error(`You cannot accept an invite that is already ${invite.status.toLowerCase()}.`);
-        }
+    // Prevent re-accept or accept after decline/suggest
+    if (
+        [InviteStatus.ACCEPTED, InviteStatus.DECLINED, InviteStatus.SUGGESTED_NEW_TIME].includes(
+            invite.status
+        )
+    ) {
+        throw new Error(
+            `You cannot accept an invite that is already ${invite.status.toLowerCase()}.`
+        );
+    }
 
-        invite.status = InviteStatus.ACCEPTED;
-        invite.respondedAt = new Date();
-        await InterestInviteRepository.save(invite);
+    invite.status = InviteStatus.ACCEPTED;
+    invite.respondedAt = new Date();
+    await InterestInviteRepository.save(invite);
 
-        // Notify creator that someone accepted their invite
-        const interest = invite.interest;
-        if (interest) {
-            const creator = await UserRepository.findOne({ where: { id: interest.userId } });
-            const accepter = await UserRepository.findOne({ where: { id: userId } });
+    // Notify creator that someone accepted their invite
+    const interest = invite.interest;
+    if (interest) {
+        const creator = await UserRepository.findOne({ where: { id: interest.userId } });
+        const accepter = await UserRepository.findOne({ where: { id: userId } });
 
-            if (creator && accepter) {
-                const notificationData = {
-                    sender: { id: accepter.id } as User,
-                    receiver: { id: creator.id } as User,
-                    notificationId: NotificationStatusCode.INTEREST_ACCEPTED,
+        if (creator && accepter) {
+            const notificationData = {
+                sender: { id: accepter.id } as User,
+                receiver: { id: creator.id } as User,
+                notificationId: NotificationStatusCode.INTEREST_ACCEPTED,
+                type: NotificationTypeEnums.INTEREST_ACCEPTED,
+                title: "Invite Accepted",
+                body: `${accepter.fullName || "Someone"} accepted your interest invite.`,
+                purpose: NotificationTypeEnums.INTEREST_ACCEPTED,
+            };
+
+            const notification = NotificationRepository.create(notificationData);
+            await NotificationRepository.save(notification);
+
+            if (creator.deviceId) {
+                const notificationPayload = {
+                    notificationId: String(NotificationStatusCode.INTEREST_ACCEPTED),
+                    interestId: String(interest.id),
                     type: NotificationTypeEnums.INTEREST_ACCEPTED,
-                    title: "Invite Accepted",
-                    body: `${accepter.fullName || "Someone"} accepted your interest invite.`,
-                    purpose: NotificationTypeEnums.INTEREST_ACCEPTED,
+                    userId: String(accepter.id),
+                    profilePicture: String(accepter.profileImageUrl || ""),
+                    name: accepter.fullName || "Someone",
                 };
 
-                const notification = NotificationRepository.create(notificationData);
-                await NotificationRepository.save(notification);
-
-                if (creator.deviceId) {
-                    const notificationPayload = {
-                        notificationId: String(NotificationStatusCode.INTEREST_ACCEPTED),
-                        interestId: String(interest.id),
-                        type: NotificationTypeEnums.INTEREST_ACCEPTED,
-                        userId: String(accepter.id),
-                        profilePicture: String(accepter.profileImageUrl || ""),
-                        name: accepter.fullName || "Someone",
-                    };
-
-                    await sendAdminNotification(
-                        creator.deviceId,
-                        "Invite Accepted",
-                        `${accepter.fullName || "Someone"} accepted your interest invite.`,
-                        notificationPayload
-                    );
-                }
+                await sendAdminNotification(
+                    creator.deviceId,
+                    "Invite Accepted",
+                    `${accepter.fullName || "Someone"} accepted your interest invite.`,
+                    notificationPayload
+                );
             }
         }
-
-        // If all invited users have accepted → mark interest confirmed
-        const allInvites = await InterestInviteRepository.find({ where: { interestId } });
-        const allAccepted = allInvites.every((i: any) => i.status === InviteStatus.ACCEPTED);
-
-        if (allAccepted && invite.interest) {
-            invite.interest.status = "Confirmed";
-            await InterestRepository.save(invite.interest);
-
-            // Optional: Notify all participants that interest is confirmed
-            const participants = await InterestInviteRepository.find({
-                where: { interestId },
-                relations: ["invitedUser"],
-            });
-
-            for (const participant of participants) {
-                const user = participant.invitedUser;
-                if (user?.deviceId) {
-                    await sendAdminNotification(
-                        user.deviceId,
-                        "Interest Confirmed",
-                        "All users have accepted — your interest is now confirmed!",
-                        {
-                            notificationId: String(NotificationStatusCode.INTEREST_CONFIRMED),
-                            interestId: String(interestId),
-                            type: NotificationTypeEnums.INTEREST_CONFIRMED,
-                        }
-                    );
-                }
-            }
-        }
-
-        return invite;
-    } catch (error: any) {
-        console.error("Error in acceptInterestInvite:", error);
-        return {
-            success: false,
-            message: error.message || "Something went wrong while accepting invite.",
-        };
     }
+
+    // If all invited users have accepted → mark interest confirmed
+    const allInvites = await InterestInviteRepository.find({ where: { interestId } });
+    const allAccepted = allInvites.every(
+        (inviteObj: InterestInvite) => inviteObj.status === InviteStatus.ACCEPTED
+    );
+
+    if (allAccepted && invite.interest) {
+        invite.interest.status = "Confirmed";
+        await InterestRepository.save(invite.interest);
+
+        // Optional: Notify all participants that interest is confirmed
+        const participants = await InterestInviteRepository.find({
+            where: { interestId },
+            relations: ["invitedUser"],
+        });
+
+        for (const participant of participants) {
+            const user = participant.invitedUser;
+            if (user?.deviceId) {
+                await sendAdminNotification(
+                    user.deviceId,
+                    "Interest Confirmed",
+                    "All users have accepted — your interest is now confirmed!",
+                    {
+                        notificationId: String(NotificationStatusCode.INTEREST_CONFIRMED),
+                        interestId: String(interestId),
+                        type: NotificationTypeEnums.INTEREST_CONFIRMED,
+                    }
+                );
+            }
+        }
+    }
+
+    return invite;
 };
 
 export const declineInterestInvite = async (userId: number, data: DeclineInterestInviteInput) => {
@@ -607,69 +615,75 @@ export const respondToInvite = async (userId: number, interestId: number, respon
 export const editInterestSlot = async (userId: number, data: EditSlotInput) => {
     const { newSlotId, message, interestId } = data;
 
-    // Find interest
-    const interest = await InterestRepository.findOne({ where: { id: interestId } });
-    if (!interest) throw new NotFoundError("Interest not found");
+    return await PostgresDataSource.transaction(async (manager: any) => {
+        const interest = await manager.findOne(InterestRepository.target, { where: { id: interestId } });
+        if (!interest) throw new NotFoundError("Interest not found");
 
-    if (interest.userId !== userId)
-        throw new ForbiddenError("You are not authorized to update this interest");
+        if (interest.userId !== userId)
+            throw new ForbiddenError("You are not authorized to update this interest");
 
-    // Find new slot
-    const slot = await SlotRepository.findOne({ where: { id: newSlotId } });
-    if (!slot) throw new NotFoundError("Selected slot not found");
+        const slot = await manager.findOne(SlotRepository.target, { where: { id: newSlotId } });
+        if (!slot) throw new NotFoundError("Selected slot not found");
 
-    // Check if slot is available
-    if ((slot as any).isBooked || (slot as any).status === "Reserved") {
-        throw new BadRequestError("Selected slot is not available");
-    }
+        // Check if selected slot already has an active booking
+        const existingBooking = await manager.findOne(BookingRepository.target, {
+            where: {
+                day: slot.day,
+                slotStartTime: slot.startTime,
+                slotEndTime: slot.endTime,
+                status: BookingStatusEnums.SCHEDULED,
+            },
+        });
 
-    // Free previous slot (if any)
-    if (interest.slotId) {
-        const oldSlot = await SlotRepository.findOne({ where: { id: interest.slotId } });
-        if (oldSlot) {
-            (oldSlot as any).isBooked = false;
-            (oldSlot as any).status = "Available";
-            await SlotRepository.save(oldSlot);
+        if (existingBooking) {
+            throw new BadRequestError("Selected slot is already booked");
         }
-    }
 
-    // Reserve new slot
-    (slot as any).isBooked = true;
-    (slot as any).status = "Reserved";
-    await SlotRepository.save(slot);
-
-    // Update interest record
-    interest.slotId = slot.id;
-    // since slot.startTime is only "10:00:00" (not a date), we won’t try to convert it to Date
-    // we’ll just store null or keep previous suggestedTime
-    interest.suggestedTime = null;
-    interest.message = message ?? interest.message;
-    await InterestRepository.save(interest);
-
-    // Reset invites if needed
-    await InterestInviteRepository.update(
-        { interestId: interest.id },
-        {
-            status: "Pending",
-            suggestedSlotId: null,
-            suggestedTime: null,
-            suggestedMessage: null,
+        // Free previous slot booking (if any)
+        if (interest.slotId) {
+            const oldSlot = await manager.findOne(SlotRepository.target, { where: { id: interest.slotId } });
+            if (oldSlot) {
+                // Cancel any booking matching the old slot timing
+                await manager
+                    .createQueryBuilder()
+                    .update(BookingRepository.target)
+                    .set({ status: BookingStatusEnums.CANCEL })
+                    .where("day = :day", { day: oldSlot.day })
+                    .andWhere("slotStartTime = :startTime", { startTime: oldSlot.startTime })
+                    .andWhere("slotEndTime = :endTime", { endTime: oldSlot.endTime })
+                    .execute();
+            }
         }
-    );
 
-    // Return clean response
-    return {
-        interestId: interest.id,
-        newSlot: {
-            id: slot.id,
-            day: slot.day,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            status: (slot as any).status ?? "Reserved",
-        },
-        message: interest.message,
-        status: "UPDATED_BY_CREATOR",
-    };
+        // Update interest record
+        interest.slotId = slot.id;
+        interest.suggestedTime = null;
+        interest.message = message ?? interest.message;
+        await manager.save(InterestRepository.target, interest);
+
+        // Reset invites
+        await manager.update(
+            InterestInviteRepository.target,
+            { interestId: interest.id },
+            {
+                status: "Pending",
+                suggestedSlotId: null,
+                suggestedTime: null,
+                suggestedMessage: null,
+            }
+        );
+
+        return {
+            interestId: interest.id,
+            newSlot: {
+                id: slot.id,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+            },
+            message: interest.message,
+            status: "UPDATED_BY_CREATOR",
+        };
+    });
 };
 
 export const reserveInterest = async (userId: number, data: ReserveInterestInput) => {
