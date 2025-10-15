@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ProfileController } from '../../controllers/app/profile.controller';
 import { authenticateJWT, authenticateUserJWT, checkStatus } from '../../middlewares/auth.middleware';
+import { attachBlockedUsers } from '../../middlewares/block.middleware';
 
 const UserProfileRouter = Router();
 
@@ -14,6 +15,9 @@ UserProfileRouter.use(checkStatus);
 
 UserProfileRouter.put('/updateProfile', ProfileController.updateProfile);
 UserProfileRouter.get('/getProfile', ProfileController.getProfile);
+UserProfileRouter.get('/searchUsers', attachBlockedUsers, ProfileController.searchUsers);
+UserProfileRouter.get('/getUserDetail/:userId', attachBlockedUsers, ProfileController.getUserDetail);
+UserProfileRouter.delete('/deleteProfile', ProfileController.deleteProfile);
 
 UserProfileRouter.post('/getPreSignedUrlForProfileImage', ProfileController.getPreSignedUrlForProfileImage);
 UserProfileRouter.post('/changeCurrentPassword', ProfileController.changeCurrentPassword);
@@ -23,7 +27,7 @@ UserProfileRouter.get('/getContactSupport', ProfileController.getContactSupport)
 UserProfileRouter.put('/addFavouriteRestaurant/:id', ProfileController.addFavouriteRestaurant);
 UserProfileRouter.delete('/removeFavouriteRestaurant/:id', ProfileController.removeFavouriteRestaurant);
 UserProfileRouter.get('/getFavouriteRestaurants', ProfileController.getFavouriteRestaurants);
-UserProfileRouter.get( "/getNotifications", ProfileController.getNotifications);
+UserProfileRouter.get("/getNotifications", ProfileController.getNotifications);
 UserProfileRouter.put("/readNotification/:id", ProfileController.readNotification);
 
 export default UserProfileRouter;

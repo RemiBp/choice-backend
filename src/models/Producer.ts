@@ -24,6 +24,8 @@ import Follow from './Follow';
 import MenuCategory from './MenuCategory';
 import ProducerDocument from './ProducerDocument';
 import ProducerOffer from './ProducerOffer';
+import CuisineType from './CuisineType';
+import Interest from './Interest';
 
 @Entity('Producers')
 export default class Producer {
@@ -153,12 +155,21 @@ export default class Producer {
     @OneToMany(() => ProducerOffer, offer => offer.producer)
     offers: ProducerOffer[];
 
+    @OneToMany(() => Interest, (interest) => interest.producer)
+    interests: Interest[];
+
     // Social Module Relations
     @OneToMany(() => Post, post => post.producer, { cascade: true })
     posts: Post[];
 
     @OneToMany(() => Follow, (follow) => follow.producer, { cascade: true })
     followers: Follow[];
+
+    @ManyToOne(() => CuisineType, cuisineType => cuisineType.producer)
+    cuisineType: CuisineType;
+
+      @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  slotDuration: number;
 
     @CreateDateColumn()
     createdAt: Date;

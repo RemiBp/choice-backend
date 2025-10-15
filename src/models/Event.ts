@@ -14,6 +14,7 @@ import { ServiceType } from '../enums/serviceType.enum';
 import EventRating from './EventRating';
 import Leisure from './Leisure';
 import EventType from './EventTypes';
+import Interest from './Interest';
 
 @Entity('Events')
 export default class Event {
@@ -82,9 +83,15 @@ export default class Event {
     @Column({ nullable: true })
     eventTypeId: number;
 
+    @Column({ type: 'jsonb', nullable: true })
+    rating: Record<string, number>;
+
     @ManyToOne(() => Producer, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'producerId' })
     producer: Producer;
+
+    @OneToMany(() => Interest, (interest) => interest.event)
+    interests: Interest[];
 
     @Column({ default: true })
     isActive: boolean;

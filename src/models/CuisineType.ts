@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import Restaurant from './Restaurant';
+import Producer from './Producer';
 
 @Entity('CuisineType')
 export default class CuisineType {
@@ -14,6 +15,9 @@ export default class CuisineType {
 
   @OneToMany(() => Restaurant, restaurant => restaurant.cuisineType)
   restaurants: Restaurant[];
+
+  @OneToMany(() => Producer, producer => producer.cuisineType)
+  producer: Producer[];
 
   @Column({ default: false })
   isDeleted: boolean;

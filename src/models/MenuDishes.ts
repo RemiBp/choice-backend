@@ -15,7 +15,7 @@ export default class MenuDishes {
 
 
   @Column({ nullable: true })
-  name: string; 
+  name: string;
 
 
   @Column({ nullable: true })
@@ -24,6 +24,9 @@ export default class MenuDishes {
 
   @Column({ nullable: true })
   price: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  rating: Record<string, number>;
 
   @ManyToOne(() => MenuCategory, menuCategory => menuCategory.dishes, { onDelete: 'CASCADE' })
   @JoinColumn()

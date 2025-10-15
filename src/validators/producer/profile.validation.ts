@@ -20,7 +20,7 @@ export const presignedURLSchema = z
     fileName: z.string({ required_error: 'fileName is required' }),
     contentType: z.string({ required_error: 'contentType is required' }),
     folderName: z.enum(
-      ['ChoiceImages','GalleryImage', 'BusinessDocuments'],
+      ['ChoiceImages', 'GalleryImage', 'BusinessDocuments'],
       {
         required_error: 'folderName is required',
       }
@@ -111,11 +111,11 @@ export const setCapacitySchema = z.object({
     .number({ required_error: 'totalSeats is required' })
     .int('Must be an integer')
     .positive('Must be greater than 0'),
-    noOfTables: z
+  noOfTables: z
     .number({ required_error: 'noOfTables is required' })
     .int('Must be an integer')
     .positive('Must be greater than 0'),
-    maxPartySize: z
+  maxPartySize: z
     .number({ required_error: 'maxPartySize is required' })
     .int('Must be an integer')
     .positive('Must be greater than 0'),

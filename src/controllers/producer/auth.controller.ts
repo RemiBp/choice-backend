@@ -62,6 +62,16 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
+export const switchProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    const result = await AuthService.switchProfile(userId);
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const saveDocument = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;

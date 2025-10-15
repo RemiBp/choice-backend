@@ -144,7 +144,7 @@ export const login = async (loginObject: UserLoginSchema) => {
       };
     }
     if (user.isDeleted) {
-      throw new BadRequestError("You're not allowed to login, Kindly contact the admin");
+      throw new BadRequestError("This account has been deleted and cannot be accessed.");
     }
     if (user.isActive === false) {
       throw new BadRequestError("You're not allowed to login, Kindly contact the admin");

@@ -50,6 +50,16 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+export const deleteProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    const result = await ProfileService.deleteProfile(userId);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getProducers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const response = await ProfileService.getProducers();
@@ -244,6 +254,19 @@ export const getGalleryImages = async (req: Request, res: Response, next: NextFu
   }
 };
 
+export const generateSlots = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const response = await ProfileService.generateSlotsForProducer(userId);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const setOperationalHours = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const hours = req.body.hours;
@@ -356,10 +379,10 @@ export const getOperationalHours = async (req: Request, res: Response, next: Nex
   }
 };
 
-export const getRestaurantSlots = async (req: Request, res: Response, next: NextFunction) => {
+export const getProducerSlots = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const restaurantId = Number(req.userId);
-    const response = await ProfileService.getRestaurantSlots(restaurantId);
+    const producerId = Number(req.userId);
+    const response = await ProfileService.getProducerSlots(producerId);
     res.status(200).json(response);
   } catch (error) {
     next(error);
@@ -669,7 +692,38 @@ export const addMenuDish = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
+export const getCuisineTypes = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const response = await ProfileService.getCuisineTypes(page, limit);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+}
 
+export const getCuisineType = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const cuisineTypeId = Number(req.params.id);
+    const response = await ProfileService.getCuisineType(cuisineTypeId);
+    res.status(200).json(response);
+  }
+  catch (error) {
+    next(error);
+  }
+}
 
+export const setCuisineType = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    const cuisineTypeId = req.body.cuisineTypeId;
+    const response = await ProfileService.setCuisineType(userId, cuisineTypeId);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
 
 export * as ProfileController from './profile.controller';

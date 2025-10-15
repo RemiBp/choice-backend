@@ -18,7 +18,7 @@ export type PreSignedURL = z.infer<typeof presignedURLSchema>;
 
 export const updateProfileSchema = z.object({
   fullName: z.string().min(2).max(255).optional(),
-  profilePicture: z.string({ required_error: 'profilePicture is required' }).trim(),
+  profileImageUrl: z.string().url("Invalid image URL").optional(),
   email: z.string().email('Invalid email address').optional(),
   phoneNumber: z.string().min(2).max(255).optional(),
   userName: z.string().min(2).max(255).optional(),

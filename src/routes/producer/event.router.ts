@@ -20,7 +20,7 @@ ProducerEventRouter.use(checkStatus);
 // Producer-side (create event, manage events)
 ProducerEventRouter.get('/getEventTypes', EventController.getEventTypes);
 ProducerEventRouter.post('/createEvent', EventController.createEvent);
-ProducerEventRouter.get("/getMyEvents", EventController.getMyEvents);
+ProducerEventRouter.get('/getMyEvents', EventController.getMyEvents);
 ProducerEventRouter.put('/updateEvent/:eventId', EventController.updateEvent);
 ProducerEventRouter.delete('/deleteEvent/:eventId', EventController.deleteEvent);
 

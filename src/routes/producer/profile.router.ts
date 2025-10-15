@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ProfileController } from '../../controllers/producer/profile.controller';
 import { authenticateBothJWT, authenticateJWT, checkStatus } from '../../middlewares/auth.middleware';
+import Producer from '../../models/Producer';
 
 const ProducerProfileRouter = Router();
 ProducerProfileRouter.get('/', (req, res) => {
@@ -8,12 +9,14 @@ ProducerProfileRouter.get('/', (req, res) => {
 });
 
 ProducerProfileRouter.get('/getAllServiceType', authenticateBothJWT, ProfileController.getAllServiceType);
+ProducerProfileRouter.get("/getCuisineTypes", ProfileController.getCuisineTypes);
 
 ProducerProfileRouter.use(authenticateJWT);
 ProducerProfileRouter.use(checkStatus);
 
 ProducerProfileRouter.put('/updateProfile', ProfileController.updateProfile);
 ProducerProfileRouter.get('/getProfile', ProfileController.getProfile);
+ProducerProfileRouter.delete('/deleteProfile', ProfileController.deleteProfile);
 ProducerProfileRouter.post('/setOperationalHours', ProfileController.setOperationalHours);
 ProducerProfileRouter.get('/getOperationalDays', ProfileController.getOperationalDays);
 ProducerProfileRouter.post('/capacity', ProfileController.setCapacity);
@@ -21,6 +24,7 @@ ProducerProfileRouter.post('/setServiceType', ProfileController.setServiceType);
 ProducerProfileRouter.get('/getServiceType', ProfileController.getServiceType);
 ProducerProfileRouter.post('/setGalleryImages', ProfileController.setGalleryImages);
 ProducerProfileRouter.get('/getGalleryImages', ProfileController.getGalleryImages);
+ProducerProfileRouter.post('/generateSlots', ProfileController.generateSlots);
 
 // ProducerProfileRouter.get('/getProfile', ProfileController.getProfile);
 ProducerProfileRouter.post('/getPreSignedUrl', ProfileController.getPreSignedUrl);
@@ -36,7 +40,7 @@ ProducerProfileRouter.post('/addUnavailableSlot', ProfileController.addUnavailab
 ProducerProfileRouter.get('/getUnavailableSlots', ProfileController.getUnavailableSlots);
 
 ProducerProfileRouter.get('/getOperationalHours', ProfileController.getOperationalHours);
-ProducerProfileRouter.get('/getRestaurantSlots', ProfileController.getRestaurantSlots);
+ProducerProfileRouter.get('/getProducerSlots', ProfileController.getProducerSlots);
 ProducerProfileRouter.post('/updateRestaurantSlots', ProfileController.updateRestaurantSlots);
 ProducerProfileRouter.post('/uploadRestaurantImages', ProfileController.uploadRestaurantImages);
 ProducerProfileRouter.put('/setMainImage/:id', ProfileController.setMainImage);
@@ -58,5 +62,9 @@ ProducerProfileRouter.post("/addMenuCategory", ProfileController.addMenuCategory
 ProducerProfileRouter.get("/getMenuCategories", ProfileController.getMenuCategories);
 ProducerProfileRouter.post("/addMenuDish", ProfileController.addMenuDish);
 ProducerProfileRouter.get("/getMenu", ProfileController.getMenu);
+
+ProducerProfileRouter.get("/getCuisineType/:id", ProfileController.getCuisineType);
+ProducerProfileRouter.post("/setCuisineType", ProfileController.setCuisineType);
+
 
 export default ProducerProfileRouter;
