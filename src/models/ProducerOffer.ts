@@ -62,6 +62,9 @@ export default class ProducerOffer {
     @Column({ type: 'enum', enum: OfferStatus, default: OfferStatus.DRAFT })
     status: OfferStatus;
 
+    @Column({ type: 'boolean', default: false })
+    isTemplate: boolean;
+
     @Column({ type: 'timestamp', nullable: true })
     scheduledAt: Date;
 

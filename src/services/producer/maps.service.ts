@@ -108,29 +108,29 @@ export const createProducerOffer = async (data: createOfferInput) => {
 
     const now = new Date();
     const scheduledAt = data.scheduledAt ? new Date(data.scheduledAt) : now;
-    const expiresAt = new Date(
-        scheduledAt.getTime() + data.validityMinutes * 60 * 1000
-    );
+    const expiresAt = new Date(scheduledAt.getTime() + data.validityMinutes * 60 * 1000);
 
-    const offer = ProducerOfferRepository.create({
-        producer,
+    return await ProducerOfferRepository.save({
+        ...data,
+        producer, // add relation after spread
         producerId: producer.id,
-        title: data.title,
-        message: data.message,
-        discountPercent: data.discountPercent,
-        validityMinutes: data.validityMinutes,
-        maxRecipients: data.maxRecipients,
-        radiusMeters: data.radiusMeters,
-        imageUrl: data.imageUrl,
         scheduledAt,
         expiresAt,
         status: data.scheduledAt ? OfferStatus.DRAFT : OfferStatus.ACTIVE,
-        timeOfDay: data.timeOfDay,
-        daysOfWeek: data.daysOfWeek,
+        isTemplate: !!data.saveAsTemplate,
+    });
+};
+
+export const getOfferTemplates = async (producerId: number) => {
+    const producer = await ProducerRepository.findOneBy({ id: producerId });
+    if (!producer) throw new NotFoundError("Producer not found");
+
+    const templates = await ProducerOfferRepository.find({
+        where: { producerId, isTemplate: true },
+        order: { createdAt: "DESC" },
     });
 
-    await ProducerOfferRepository.save(offer);
-    return offer;
+    return templates;
 };
 
 export const getProducerOffers = async (producerId: number) => {

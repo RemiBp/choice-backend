@@ -35,6 +35,17 @@ export const createProducerOffer = async (req: Request, res: Response, next: Nex
     }
 };
 
+export const getOfferTemplates = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const producerId = Number(req.params.producerId);
+        const data = await MapsService.getOfferTemplates(producerId);
+
+        return sendApiResponse(res, 200, "Offer templates fetched successfully", data);
+    } catch (err) {
+        next(err);
+    }
+};
+
 export const getProducerOffers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { producerId } = req.params;

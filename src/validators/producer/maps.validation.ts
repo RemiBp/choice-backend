@@ -84,6 +84,7 @@ export const createOfferSchema = z.object({
     daysOfWeek: z
         .array(z.nativeEnum(DayOfWeekEnum))
         .default([DayOfWeekEnum.EVERYDAY]),
+    saveAsTemplate: z.boolean()
 });
 
 
