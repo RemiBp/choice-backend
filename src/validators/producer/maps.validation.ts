@@ -99,3 +99,17 @@ export const GetProducerOffersSchema = z.object({
 });
 
 export type GetProducerOffersInput = z.infer<typeof GetProducerOffersSchema>;
+
+export const GetProducerHeatmapSchema = z.object({
+    producerId: z.number().int().positive({ message: "producerId must be a positive integer" }),
+});
+
+export type GetProducerHeatmapInput = z.infer<typeof GetProducerHeatmapSchema>;
+
+export const SendOfferNotificationSchema = z.object({
+    offerId: z.number().int().positive({ message: "offerId must be a positive integer" }),
+    latitude: z.number({ message: "latitude is required" }),
+    longitude: z.number({ message: "longitude is required" }),
+});
+
+export type SendOfferNotificationInput = z.infer<typeof SendOfferNotificationSchema>;

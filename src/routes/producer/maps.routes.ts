@@ -10,11 +10,14 @@ ProducerMapRouter.get('/', (req, res) => {
 ProducerMapRouter.use(authenticateJWTForBooking);
 ProducerMapRouter.use(checkStatus);
 
-ProducerMapRouter.get('/getNearbyProducers', MapsController.getNearbyProducers);
-ProducerMapRouter.get('/getNearbyUsers', MapsController.getNearbyUsers);
+// ProducerMapRouter.get('/getNearbyProducers', MapsController.getNearbyProducers);
+// ProducerMapRouter.get('/getProducerDetails/:id', MapsController.getProducerDetails);
+// ProducerMapRouter.get('/getNearbyUsers', MapsController.getNearbyUsers);
 ProducerMapRouter.post('/createProducerOffer', MapsController.createProducerOffer);
-ProducerMapRouter.post('/getOfferTemplates/:producerId', MapsController.getOfferTemplates);
+ProducerMapRouter.get('/getOfferTemplates/:producerId', MapsController.getOfferTemplates);
 ProducerMapRouter.get('/getProducerOffers/:producerId', MapsController.getProducerOffers);
-ProducerMapRouter.get('/getProducerDetails/:id', MapsController.getProducerDetails);
+ProducerMapRouter.get('/getUserLiveOffers', MapsController.getUserLiveOffers);
+ProducerMapRouter.get('/getProducerHeatmap/:id', MapsController.getProducerHeatmap);
+ProducerMapRouter.post('/sendOfferNotification', MapsController.sendOfferNotification);
 
 export default ProducerMapRouter;

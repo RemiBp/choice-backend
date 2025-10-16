@@ -1,5 +1,6 @@
 export enum OfferStatus {
   DRAFT = "DRAFT",
   ACTIVE = "ACTIVE",
-  EXPIRED = "EXPIRED"
+  SENT = "SENT",
+  EXPIRED = "EXPIRED",
 }
