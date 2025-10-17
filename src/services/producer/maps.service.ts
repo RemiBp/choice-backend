@@ -169,30 +169,14 @@ export const getUserLiveOffers = async (userId: number) => {
 
     // Fetch those offers (that are not expired)
     const offers = await ProducerOfferRepository.createQueryBuilder("offer")
-        .innerJoinAndSelect("offer.producer", "producer")
+        .innerJoinAndSelect("offer.producer")
         .where("offer.id IN (:...offerIds)", { offerIds })
-        .andWhere("offer.expiresAt > NOW()")
+        // .andWhere("offer.expiresAt > NOW()")
         .andWhere("offer.status IN (:...statuses)", { statuses: ["SENT", "ACTIVE"] })
         .getMany();
 
     // Format the result
-    return offers.map((offer: any) => ({
-        id: offer.id,
-        title: offer.title,
-        message: offer.message,
-        discountPercent: offer.discountPercent,
-        expiresAt: offer.expiresAt,
-        remainingMinutes: Math.max(
-            0,
-            Math.floor((+new Date(offer.expiresAt) - Date.now()) / 60000)
-        ),
-        producer: {
-            id: offer.producer.id,
-            name: offer.producer.name,
-            logoUrl: offer.producer.logoUrl,
-            type: offer.producer.type,
-        },
-    }));
+    return offers;
 };
 
 export const getProducerDetails = async (id: number) => {
@@ -266,7 +250,7 @@ export const sendOfferNotification = async (data: SendOfferNotificationInput) =>
 
     const { producer, maxRecipients, discountPercent, title, message } = offer;
 
-    const radius = offer.radiusMeters || 500;
+    const radius = offer.radiusMeters;
     const users = await getNearbyUsers({ latitude, longitude, radius });
     const targetUsers = users.slice(0, maxRecipients).filter((user: any) => user.id && user.deviceId);
 
