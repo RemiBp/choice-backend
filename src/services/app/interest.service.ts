@@ -34,7 +34,17 @@ export const createInterest = async (userId: number, data: CreateInterestInput) 
     // PRODUCER TYPE INTEREST
     if (type === InterestType.PRODUCER) {
         if (!producerId) throw new Error("producerId is required for Producer type");
-        const producer = await ProducerRepository.findOne({ where: { id: producerId } });
+
+        // Use QueryBuilder to fetch only the id column
+        const producer = await ProducerRepository.createQueryBuilder("producer")
+            .select(["producer.id"]) // only select the id
+            .where("producer.id = :id", { id: producerId })
+            .getOne();
+
+        if (!producer) throw new NotFoundError("Producer not found");
+
+        targetId = producer.id;
+
         if (!producer) throw new NotFoundError("Producer not found");
         targetId = producer.id;
 
@@ -225,7 +235,6 @@ export const invitedDetails = async (userId: number, interestId: number) => {
             "event",
             "slot",
             "invites",
-            "invites.invitedUser",
         ],
     });
 
