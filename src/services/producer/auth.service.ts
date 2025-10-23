@@ -43,7 +43,7 @@ import { BusinessRole } from '../../enums/Producer.enum';
 import { ProducerStatus } from '../../enums/producerStatus.enum';
 import { getPresignedUploadUrl } from '../../utils/s3Service';
 import s3Service from '../s3.service';
-import { PreSignedURL, ProducerDocumentInput } from '../../validators/producer/profile.validation';
+import { PreSignedURL, ProducerDocumentInput, ProducerDocumentsUpdateInput } from '../../validators/producer/profile.validation';
 import Producer from '../../models/Producer';
 
 // export const createProducer = async (input: CreateProducer) => {
@@ -425,6 +425,40 @@ export const saveDocument = async (userId: number, document: ProducerDocumentInp
     fileUrl: saved.fileUrl,
     producerId: producer.id,
     createdAt: saved.createdAt,
+  };
+};
+
+export const getProducerDocuments = async (userId: number) => {
+  const producer = await ProducerRepository.findOne({ where: { userId } });
+  if (!producer) throw new NotFoundError("Producer not found");
+
+  return {
+    document1: producer.document1,
+    document1Expiry: producer.document1Expiry,
+    document2: producer.document2,
+    document2Expiry: producer.document2Expiry,
+  };
+};
+
+export const updateProducerDocuments = async (userId: number, data: ProducerDocumentsUpdateInput) => {
+  const producer = await ProducerRepository.findOne({ where: { userId } });
+  if (!producer) throw new NotFoundError("Producer not found");
+
+  // safely merge only defined fields
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined) (producer as any)[key] = value;
+  });
+
+  const saved = await ProducerRepository.save(producer);
+  console.log("🚀 ~ updateProducerDocuments ~ saved:", saved)
+
+  return {
+    id: saved.id,
+    document1: saved.document1,
+    document1Expiry: saved.document1Expiry,
+    document2: saved.document2,
+    document2Expiry: saved.document2Expiry,
+    updatedAt: saved.updatedAt,
   };
 };
 

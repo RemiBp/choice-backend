@@ -50,6 +50,21 @@ export const ProducerDocumentSchema = z.object({
 
 export type ProducerDocumentInput = z.infer<typeof ProducerDocumentSchema>;
 
+export const ProducerDocumentsUpdateSchema = z.object({
+  document1: z
+    .string()
+    .min(1, "Document1 cannot be empty")
+    .optional(),
+  document1Expiry: z.coerce.date().optional(),
+  document2: z
+    .string()
+    .min(1, "Document2 cannot be empty")
+    .optional(),
+  document2Expiry: z.coerce.date().optional(),
+});
+
+export type ProducerDocumentsUpdateInput = z.infer<typeof ProducerDocumentsUpdateSchema>;
+
 export const updateProfileSchema = z.object({
   businessName: z.string({ required_error: 'Business name is required' }).trim(),
   address: z.string({ required_error: 'Address is required' }).trim(),

@@ -85,6 +85,7 @@ export const updateProfile = async (
     // Update Producer Info
     // --------------------
     Object.assign(user.producer, {
+      name: updateProfileObject.businessName,
       address: updateProfileObject.address,
       city: updateProfileObject.city,
       country: updateProfileObject.country,
@@ -115,10 +116,18 @@ export const updateProfile = async (
     await BusinessProfileRepository.save(user.businessProfile);
     await UserRepository.save(user);
 
+    let businessProfile = null;
+    if (user.businessProfile) {
+      // Exclude certain fields from response
+      const { businessName, address, city, latitude, longitude, phoneNumber, ...rest } =
+        user.businessProfile;
+      businessProfile = rest;
+    }
+
     return {
       message: "Profile updated successfully",
       producer: user.producer,
-      businessProfile: user.businessProfile,
+      businessProfile,
     };
   } catch (error) {
     console.error("Error in updateProfile", { error });
@@ -130,20 +139,22 @@ export const updateProfile = async (
 export const getProfile = async (userId: number) => {
   const user = await UserRepository.findOne({
     where: { id: userId },
-    relations: ['businessProfile', 'producer', 'producer.cuisineType'],
+    relations: ["producer", "businessProfile"],
   });
 
-  if (!user) {
-    throw new NotFoundError('User not found');
+  if (!user) throw new NotFoundError("User not found");
+
+  let businessProfile = null;
+
+  if (user.businessProfile) {
+    // Exclude specific fields using destructuring
+    const { businessName, address, city, latitude, longitude, phoneNumber, ...rest } = user.businessProfile;
+    businessProfile = rest;
   }
 
   return {
-    email: user.email,
-    phoneNumber: user.phoneNumber,
-    isVerified: user.isVerified,
-    businessProfile: user.businessProfile ? mapBusinessProfile(user.businessProfile) : null,
-    producer: user.producer ? mapProducer(user.producer) : null,
-    cuisineType: user.producer ? user.producer.cuisineType : null,
+    producer: user.producer || null,
+    businessProfile,
   };
 };
 

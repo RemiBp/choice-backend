@@ -10,7 +10,7 @@ import {
   getPresignedDocumentSchema,
   submitDocumentsSchema,
 } from '../../validators/producer/auth.validation';
-import { presignedURLSchema, ProducerDocumentSchema } from '../../validators/producer/profile.validation';
+import { presignedURLSchema, ProducerDocumentSchema, ProducerDocumentsUpdateSchema } from '../../validators/producer/profile.validation';
 import { sendApiResponse } from '../../utils/sendApiResponse';
 
 export const createProducer = async (req: Request, res: Response, next: NextFunction) => {
@@ -85,6 +85,27 @@ export const saveDocument = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
+export const getProducerDocuments = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    const documents = await AuthService.getProducerDocuments(userId);
+    return sendApiResponse(res, 200, "Producer documents fetched successfully", documents);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProducerDocuments = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    const input = ProducerDocumentsUpdateSchema.parse(req.body);
+
+    const updated = await AuthService.updateProducerDocuments(userId, input);
+    return sendApiResponse(res, 200, "Producer documents updated successfully", updated);
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getPreSignedUrl = async (req: Request, res: Response, next: NextFunction) => {
   try {
