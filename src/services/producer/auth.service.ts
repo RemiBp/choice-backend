@@ -124,68 +124,7 @@ export const register = async (signUpInput: SignUp) => {
   await queryRunner.startTransaction();
 
   try {
-    const {
-      email,
-      password,
-      businessName,
-      role,
-      latitude,
-      longitude,
-      claimProducerId, // new field added in schema
-    } = signUpInput;
-
-    // If it's a claim flow, handle first and return early
-    if (claimProducerId) {
-      const existingProducer = await queryRunner.manager.findOne(ProducerRepository.target, {
-        where: { id: claimProducerId },
-      });
-
-      if (!existingProducer) throw new BadRequestError('Producer not found');
-      if (existingProducer.userId)
-        throw new BadRequestError('This business has already been claimed');
-
-      // Create new user for claimed producer
-      const hashedPassword = await generateHashedPassword(password);
-
-      const userRole = await queryRunner.manager.findOne(RolesRepository.target, {
-        where: { name: role },
-      });
-      if (!userRole) throw new BadRequestError('Role not found');
-
-      const newUser = UserRepository.create({
-        email: email.toLowerCase(),
-        role: userRole,
-        isVerified: false,
-      });
-
-      const savedUser = await queryRunner.manager.save(UserRepository.target, newUser);
-
-      await queryRunner.manager.save(PasswordRepository.target, {
-        user: savedUser,
-        password: hashedPassword,
-      });
-
-      // Link producer with new user
-      existingProducer.user = savedUser;
-      existingProducer.userId = savedUser.id;
-      existingProducer.status = ProducerStatus.CLAIMED; // mark as claimed
-      await queryRunner.manager.save(ProducerRepository.target, existingProducer);
-
-      await queryRunner.commitTransaction();
-
-      const otp = '000000';
-      await SignUpOTPRepository.save({
-        user: savedUser,
-        otp,
-      });
-
-      return {
-        message: 'Business claimed successfully. OTP sent for verification.',
-        producerId: existingProducer.id,
-        businessName: existingProducer.name,
-        status: existingProducer.status,
-      };
-    }
+    const { email, password, businessName, role, latitude, longitude } = signUpInput;
 
     const existingUser = await queryRunner.manager.findOne(UserRepository.target, {
       where: { email: email.toLowerCase() },
@@ -195,11 +134,14 @@ export const register = async (signUpInput: SignUp) => {
       const allOtps = await SignUpOTPRepository.find({
         where: { user: { id: existingUser.id } },
       });
-      if (allOtps.length > 0) await SignUpOTPRepository.remove(allOtps);
-
+      if (allOtps.length > 0) {
+        await SignUpOTPRepository.remove(allOtps);
+      }
       const otp = '000000';
-      await SignUpOTPRepository.save({ user: existingUser, otp });
-
+      await SignUpOTPRepository.save({
+        user: existingUser,
+        otp,
+      });
       return {
         isVerified: false,
         message: 'OTP sent successfully',
@@ -247,7 +189,7 @@ export const register = async (signUpInput: SignUp) => {
       address: '',
       placeId: `${savedUser.id}`,
       type: role as BusinessRole,
-      status: ProducerStatus.APPROVED,
+      status: ProducerStatus.PENDING,
       isActive: true,
       isDeleted: false,
       user: savedUser,
@@ -263,7 +205,7 @@ export const register = async (signUpInput: SignUp) => {
 
     await queryRunner.manager.save(ProducerRepository.target, producer);
 
-    // Create sub-records by role
+    // Insert into child table depending on role
     if (role === BusinessRole.LEISURE) {
       const leisure = LeisureRepository.create({ producerId: producer.id });
       await queryRunner.manager.save(LeisureRepository.target, leisure);
