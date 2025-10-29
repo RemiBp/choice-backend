@@ -1,0 +1,6 @@
+export enum LocationPrivacyMode {
+    NOT_SHARED = "NOT_SHARED",
+    MY_FRIENDS = "MY_FRIENDS",
+    MY_FRIENDS_EXCEPT = "MY_FRIENDS_EXCEPT",
+    ONLY_THESE_FRIENDS = "ONLY_THESE_FRIENDS",
+}

@@ -2,12 +2,14 @@ import { NextFunction, Request, Response } from 'express';
 import {
   accountDeleteSchema,
   presignedURLSchema,
+  UpdateLocationPrivacySchema,
   updateProfileSchema,
 } from '../../validators/app/user.profile.validation';
 import { ProfileService } from '../../services/app/profile.service';
 import { BadRequestError } from '../../errors/badRequest.error';
 import { GetUserDetailSchema, SearchUsersSchema } from '../../validators/producer/post.validation';
 import { sendApiResponse } from '../../utils/sendApiResponse';
+import { LocationPrivacyRepository } from '../../repositories';
 
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -244,6 +246,44 @@ export const readNotification = async (
       notificationId,
     );
     return res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLocationPrivacy = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.userId);
+    const response = await ProfileService.getLocationPrivacy(userId);
+    sendApiResponse(res, 200, "Location privacy fetched successfully", response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateLocationPrivacy = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validatedObject = UpdateLocationPrivacySchema.parse(req.body);
+    const userId = Number(req.userId);
+    const response = await ProfileService.updateLocationPrivacy(
+      userId,
+      validatedObject
+    );
+    sendApiResponse(res, 200, "Location privacy updated successfully", response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const checkViewerAccess = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const ownerUserId = Number(req.params.ownerUserId);
+    const viewerUserId = Number(req.userId);
+    const canView = await ProfileService.canViewLocation(
+      ownerUserId,
+      viewerUserId
+    );
+    sendApiResponse(res, 200, "Location access verified", { canView });
   } catch (error) {
     next(error);
   }

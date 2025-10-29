@@ -30,4 +30,8 @@ UserProfileRouter.get('/getFavouriteRestaurants', ProfileController.getFavourite
 UserProfileRouter.get("/getNotifications", ProfileController.getNotifications);
 UserProfileRouter.put("/readNotification/:id", ProfileController.readNotification);
 
+UserProfileRouter.get("/getLocationPrivacy", ProfileController.getLocationPrivacy);
+UserProfileRouter.post("/updateLocationPrivacy", ProfileController.updateLocationPrivacy);
+UserProfileRouter.get("/checkViewerAccess/:ownerUserId", ProfileController.checkViewerAccess);
+
 export default UserProfileRouter;

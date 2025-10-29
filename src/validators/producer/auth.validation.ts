@@ -13,10 +13,10 @@ export const createProducerSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   type: z.enum(businessRoles, { required_error: 'Producer type is required' }),
-  // serviceType: z.nativeEnum(ServiceType).optional(),
   totalCapacity: z.number().optional(),
   document1: z.string({ required_error: 'Document1 is required' }),
   document2: z.string({ required_error: 'Document2 is required' }),
+  companyEmail: z.string().email('Invalid email format').optional(),
 });
 
 export type CreateProducer = z.infer<typeof createProducerSchema>;

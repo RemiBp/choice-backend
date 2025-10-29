@@ -38,6 +38,9 @@ export default class Producer {
     @Column()
     name: string;
 
+    @Column({ nullable: true })
+    companyEmail?: string;
+
     @Column()
     address: string;
 
