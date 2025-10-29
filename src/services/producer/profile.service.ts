@@ -10,6 +10,7 @@ import {
   SetMainImageSchema,
   SetOperationHoursSchema,
   SetServiceTypeInput,
+  UpdatePasswordSchema,
   UpdateProfileSchema,
   UploadRestaurantImagesSchema,
 } from '../../validators/producer/profile.validation';
@@ -55,6 +56,7 @@ import { BusinessRole } from '../../enums/Producer.enum';
 import MenuCategory from '../../models/MenuCategory';
 import MenuDishes from '../../models/MenuDishes';
 import PostgresDataSource from '../../data-source';
+import bcrypt from 'bcrypt';
 
 export const getAllServiceType = async () => {
   const serviceTypes = await WellnessServiceTypeRepository.find({
@@ -63,10 +65,7 @@ export const getAllServiceType = async () => {
   return serviceTypes;
 };
 
-export const updateProfile = async (
-  userId: number,
-  updateProfileObject: UpdateProfileSchema
-) => {
+export const updateProfile = async (userId: number, updateProfileObject: UpdateProfileSchema) => {
   try {
     const user = await UserRepository.findOne({
       where: { id: userId },
@@ -135,6 +134,44 @@ export const updateProfile = async (
   }
 };
 
+export const updatePassword = async (userId: number, payload: UpdatePasswordSchema) => {
+  try {
+    const { currentPassword, newPassword } = payload;
+
+    // Find the user with the Password relation
+    const user = await UserRepository.findOne({
+      where: { id: userId },
+      relations: ["Password"],
+    });
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    if (!user.Password) {
+      throw new NotFoundError("Password record not found for this user");
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.Password.password);
+    if (!isMatch) {
+      throw new BadRequestError("Current password is incorrect");
+    }
+
+    // Hash and update new password
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
+    user.Password.password = newHashedPassword;
+
+    await PasswordRepository.save(user.Password);
+
+    return {
+      message: "Password updated successfully",
+    };
+  } catch (error) {
+    console.error("Error in PasswordService.updatePassword", { error });
+    throw error;
+  }
+};
 
 export const getProfile = async (userId: number) => {
   const user = await UserRepository.findOne({
@@ -891,7 +928,7 @@ export const getOperationalHours = async (restaurantId: number) => {
     const operationalHours = await OperationalHourRepository.find({
       where: { user: { id: restaurantId } },
     });
-    return operationalHours;
+    return { data: operationalHours };
   } catch (error) {
     throw error;
   }

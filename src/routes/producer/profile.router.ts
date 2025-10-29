@@ -15,6 +15,7 @@ ProducerProfileRouter.use(authenticateJWT);
 ProducerProfileRouter.use(checkStatus);
 
 ProducerProfileRouter.put('/updateProfile', ProfileController.updateProfile);
+ProducerProfileRouter.patch('/updatePassword', ProfileController.updatePassword);
 ProducerProfileRouter.get('/getProfile', ProfileController.getProfile);
 ProducerProfileRouter.delete('/deleteProfile', ProfileController.deleteProfile);
 ProducerProfileRouter.post('/setOperationalHours', ProfileController.setOperationalHours);

@@ -10,6 +10,7 @@ import {
   setMainImageSchema,
   setOperationHoursSchema,
   setServiceTypeSchema,
+  updatePasswordSchema,
   updateProfileSchema,
   uploadDocumentsSchema,
   uploadRestaurantImagesSchema,
@@ -34,6 +35,18 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
     const validatedObject = updateProfileSchema.parse(req.body);
     const userId = Number(req.userId);
     const response = await ProfileService.updateProfile(userId, validatedObject);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePassword = async (req: Request,res: Response,next: NextFunction) => {
+  try {
+    const validatedData = updatePasswordSchema.parse(req.body);
+    const userId = Number(req.userId);
+
+    const response = await ProfileService.updatePassword(userId, validatedData);
     res.status(200).json(response);
   } catch (error) {
     next(error);
