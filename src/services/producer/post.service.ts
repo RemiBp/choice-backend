@@ -28,6 +28,8 @@ import {
     MenuDishesRepository,
     WellnessServiceTypeRepository,
     WellnessServiceRepository,
+    BookingRepository,
+    SlotRepository,
 } from '../../repositories';
 import { CreateDishRatingsInput, CreateEmotionInput, CreateEventRatingsInput, CreatePostInput, CreateProducerPostInput, CreateRatingInput, CreateServiceRatingsInput, EmotionSchema } from '../../validators/producer/post.validation';
 import AppDataSource from '../../data-source';
@@ -39,10 +41,13 @@ import { sendAdminNotification } from '../../utils/sendAdminNotification';
 import { NotificationTypeEnums, PostNotificationCode } from '../../enums/post-notification.enum';
 import { FollowStatusEnums } from '../../enums/followStatus.enum';
 import { LeisureRatingCriteria, RestaurantRatingCriteria, WellnessRatingCriteria } from '../../enums/rating.enum';
-import { EntityManager, ILike, In } from 'typeorm';
+import { Between, EntityManager, ILike, In } from 'typeorm';
 import ServiceRating from '../../models/ServiceRatings';
 import ProducerService from '../../models/Services';
 import WellnessServiceType from '../../models/WellnessServiceTypes';
+import { addDays, addMinutes, endOfDay, endOfWeek, startOfDay, startOfWeek } from 'date-fns';
+import { ProducerType } from '../../enums/ProducerType.enum';
+import { getProducerSlots } from './profile.service';
 
 export const searchProducers = async (query: string, type: string) => {
     if (
@@ -194,6 +199,202 @@ export const getPostsByProducer = async (userId: number, roleName: string) => {
     });
 
     return posts;
+};
+
+export const getPostsByRestaurant = async (restaurantName: string, page = 1, limit = 10) => {
+    // find the restaurant
+    const producer = await ProducerRepository.createQueryBuilder("p")
+        .where("LOWER(p.name) LIKE LOWER(:name)", { name: `%${restaurantName}%` })
+        .andWhere("p.type = :type", { type: "restaurant" })
+        .getOne();
+
+    if (!producer) throw new NotFoundError("No restaurant found with that name.");
+
+    // fetch posts related to that producer
+    const [posts, total] = await PostRepository.createQueryBuilder("post")
+        .where("post.producerId = :producerId", { producerId: producer.id })
+        .orderBy("post.createdAt", "DESC")
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .getManyAndCount();
+
+    return {
+        message: `Found ${posts.length} posts from ${producer.name}`,
+        data: posts,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        },
+    };
+};
+
+export const getFriendsWhoPostedThisWeek = async (userId: number) => {
+    // Step 1: Get all accepted follows (friends)
+    const friends = await FollowRepository.createQueryBuilder("f")
+        .leftJoinAndSelect("f.followedUser", "u")
+        .where("f.followerId = :userId", { userId })
+        .andWhere("f.status = :status", { status: FollowStatusEnums.Approved })
+        .getMany();
+
+    if (friends.length === 0) {
+        return {
+            message: "You have no friends yet 😢",
+            data: [],
+        };
+    }
+
+    const friendIds = friends.map((f: any) => f.followedUserId).filter(Boolean);
+
+    // Step 2: Define this week’s UTC range
+    const now = new Date();
+    const start = startOfWeek(now, { weekStartsOn: 1 });
+    const end = endOfWeek(now, { weekStartsOn: 1 });
+
+    // Step 3: Find posts created by friends this week
+    const posts = await PostRepository.createQueryBuilder("p")
+        .leftJoinAndSelect("p.user", "u")
+        .where("p.userId IN (:...friendIds)", { friendIds })
+        .andWhere("p.createdAt BETWEEN :start AND :end", { start, end })
+        .orderBy("p.createdAt", "DESC")
+        .getMany();
+
+    if (!posts.length) {
+        return {
+            message: "None of your friends made any posts this week.",
+            data: [],
+        };
+    }
+
+    // Step 4: Group posts per friend
+    const grouped = posts.reduce((acc: Record<number, any>, post: any) => {
+        const uid = post.user.id;
+        if (!acc[uid]) {
+            acc[uid] = {
+                friendId: uid,
+                friendName: post.user.userName,
+                totalPosts: 0,
+                latestPostAt: post.createdAt,
+            };
+        }
+        acc[uid].totalPosts++;
+        return acc;
+    }, {});
+
+    const result = Object.values(grouped);
+
+    return {
+        message: `${result.length} friends made a choice post this week 🎉`,
+        data: result,
+    };
+};
+
+export const getMostVisitedRestaurants = async (limit = 10) => {
+    const qb = ProducerRepository.createQueryBuilder("producer")
+        .leftJoin("producer.posts", "post")
+        .select([
+            "producer.id AS id",
+            "producer.name AS name",
+            "producer.type AS type",
+            "producer.latitude AS latitude",
+            "producer.longitude AS longitude",
+            "producer.address AS address",
+        ])
+        .addSelect("COUNT(post.id)", "post_count")
+        .where("producer.type = :type", { type: ProducerType.RESTAURANT })
+        .andWhere("producer.isActive = true")
+        .groupBy("producer.id")
+        .orderBy("post_count", "DESC")
+        .limit(limit);
+
+    const data = await qb.getRawMany();
+
+    if (!data.length) {
+        return { message: "No visited restaurants found.", data: [] };
+    }
+
+    return {
+        message: `Top ${data.length} most visited restaurants 🍽️`,
+        data,
+    };
+};
+
+export const getProducerAvailabilityByName = async (producerName: string) => {
+    try {
+        // 1️⃣ Find the producer by name (case-insensitive)
+        const producer = await ProducerRepository.createQueryBuilder("producer")
+            .where("LOWER(producer.name) = LOWER(:name)", { name: producerName })
+            .getOne();
+
+        if (!producer) {
+            throw new BadRequestError(`No restaurant found with name "${producerName}".`);
+        }
+
+        // 2️⃣ Fetch all slots for this producer
+        const availability = await getProducerSlots(producer.userId);
+
+        return {
+            message: `Availability for ${producer.businessName}`,
+            data: availability.data,
+        };
+    } catch (error) {
+        console.error("Error in getProducerAvailabilityByName:", error);
+        throw error;
+    }
+};
+
+export const getOpenWellnessStudios = async () => {
+    try {
+        // 🕒 Current UTC day + time
+        const now = new Date();
+        const days = [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+        ];
+        const currentDay = days[now.getUTCDay()];
+        const currentTime = now.toISOString().substring(11, 19); // "HH:MM:SS"
+
+        // 🔍 Query all active wellness producers that have open slots
+        const openStudios = await ProducerRepository.createQueryBuilder("producer")
+            .innerJoin("producer.user", "user")
+            .innerJoin("Slot", "slot", "slot.userId = user.id") // ✅ join via foreign key
+            .where("producer.type = :type", { type: BusinessRole.WELLNESS })
+            .andWhere("producer.isActive = true")
+            .andWhere("slot.day = :currentDay", { currentDay })
+            .andWhere("slot.startTime <= :currentTime AND slot.endTime >= :currentTime", { currentTime })
+            .select([
+                "producer.id AS id",
+                "producer.name AS name",
+                "producer.address AS address",
+                "slot.startTime AS openFrom",
+                "slot.endTime AS openUntil",
+                "slot.day AS day",
+            ])
+            .getRawMany();
+
+        const formatted = openStudios.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            address: s.address,
+            openFrom: s.openfrom,
+            openUntil: s.openuntil,
+            day: s.day,
+        }));
+
+        return {
+            message: `Currently open wellness studios (${formatted.length}) [UTC time based]`,
+            data: formatted,
+        };
+    } catch (error) {
+        console.error("Error in getOpenWellnessStudios (UTC):", error);
+        throw error;
+    }
 };
 
 // export const getPosts = async (userId: number, roleName: string) => {

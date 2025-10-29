@@ -21,7 +21,7 @@ import { NotificationStatusCode } from "../../enums/NotificationStatusCode.enum"
 import InterestInvite from "../../models/InterestInvite";
 import PostgresDataSource from "../../data-source";
 import { BookingStatusEnums } from "../../enums/bookingStatus.enum";
-import { sendNotification } from "../../utils/notificationHelper";
+import { sendNotification } from "../../utils/notificationHelper"; 
 
 export const createInterest = async (userId: number, data: CreateInterestInput) => {
     const { type, producerId, eventId, slotId, suggestedTime, message, invitedUserIds = [] } = data;

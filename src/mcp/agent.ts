@@ -2,7 +2,7 @@
 import OpenAI from "openai";
 import { Agent, run, system, user } from "@openai/agents";
 import { setDefaultOpenAIClient, OpenAIResponsesModel } from "@openai/agents-openai";
-import { findNearbyRestaurants, findTopRatedNearby } from "./tool";
+import { checkRestaurantAvailability, findMostVisitedRestaurants, findNearbyRestaurants, findOpenWellnessStudios, findRestaurantPosts, findTopRatedNearby, friendsPostsThisWeek } from "./tool";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 setDefaultOpenAIClient(openai);
@@ -11,19 +11,52 @@ const AGENT_CONFIG = {
     name: "ChoiceApp Copilot",
     instructions: [
         "You are the official AI Copilot for ChoiceApp.",
-        "CRITICAL: If the user asks for restaurants, MUST call one of:",
-        "  - find_nearby_restaurants (for general nearby)",
-        "  - find_top_rated_nearby (when the user mentions 'top', 'best', 'highest rated')",
-        "Parameter filling rules:",
+        "",
+        "CRITICAL TOOL RULES:",
+        "- If the user asks for restaurants, use one of:",
+        "    • find_nearby_restaurants (for general nearby)",
+        "    • find_top_rated_nearby (for queries with 'top', 'best', 'highest rated')",
+        "    • find_most_visited_restaurants (for queries about 'most visited', 'popular', 'famous', etc.)",
+        "",
+        "PARAMETER RULES:",
         "  - latitude := user context JSON at coords.latitude",
         "  - longitude := user context JSON at coords.longitude",
-        "  - radius_km := (user context radius_km) OR default 5",
-        "If any of latitude/longitude missing, respond asking the app to provide coords.",
-        "Return the tool output directly as JSON: { message: string, data: any }.",
+        "  - radius_km := (user context.radius_km) OR default 5",
+        "",
+        "LOGIC FOR VAGUE QUERIES:",
+        "  - If the user's query does not clearly mention restaurants, wellness, or events, DO NOT assume.",
+        "  - Instead, reply in JSON: { message: 'Please clarify: are you asking about restaurants, wellness, or events?', data: null }.",
+        "",
+        "If latitude or longitude is missing, reply: { message: 'Please provide user coordinates to continue.', data: null }.",
+        "",
+        "Return all final answers strictly in JSON format: { message: string, data: any }.",
     ].join("\n"),
-    toolUseBehavior: { stopAtToolNames: ["find_nearby_restaurants", "find_top_rated_nearby"] },
+
+    toolUseBehavior: {
+        stopAtToolNames: [
+            "find_nearby_restaurants",
+            "find_top_rated_nearby",
+            "find_most_visited_restaurants",
+            "find_restaurant_posts",
+            "friends_posts_this_week",
+            "find_events_this_weekend_by_location",
+            "check_restaurant_availability",
+            "check_restaurant_availability",
+            "find_open_wellness_studios"
+        ],
+    },
+
     model: new OpenAIResponsesModel(openai, "gpt-4.1-mini"),
-    tools: [findNearbyRestaurants, findTopRatedNearby],
+
+    tools: [
+        findNearbyRestaurants,
+        findTopRatedNearby,
+        findRestaurantPosts,
+        friendsPostsThisWeek,
+        findMostVisitedRestaurants,
+        checkRestaurantAvailability,
+        findOpenWellnessStudios
+    ],
 };
 
 const agent = new Agent(AGENT_CONFIG);

@@ -6,9 +6,19 @@ tools:
   - name: find_nearby_restaurants
     description: Find nearby restaurants filtered by location.
     parameters:
-      latitude: number
-      longitude: number
-      radius_km: number
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          description: Latitude of the user’s location.
+        longitude:
+          type: number
+          description: Longitude of the user’s location.
+        radius_km:
+          type: number
+          description: Search radius in kilometers.
+          default: 10
     endpoint: /api/app/maps/getNearbyProducers
     method: GET
     response:
@@ -20,9 +30,16 @@ tools:
   - name: find_top_rated_nearby
     description: Show top-rated restaurants and wellness services near the user.
     parameters:
-      latitude: number
-      longitude: number
-      radius_km: number
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        radius_km:
+          type: number
+          default: 10
     endpoint: /api/app/maps/getNearbyProducers
     method: GET
     response:
@@ -31,3 +48,104 @@ tools:
       data:
         restaurants: []
         wellness: []
+
+  - name: find_restaurant_posts
+    description: Fetch all posts made by a specific restaurant.
+    parameters:
+      type: object
+      required: [restaurantName]
+      properties:
+        restaurantName:
+          type: string
+          description: The name of the restaurant whose posts you want to see.
+        limit:
+          type: number
+          description: Number of posts to return. Default is 10.
+          default: 10
+        page:
+          type: number
+          description: Page number for pagination. Default is 1.
+          default: 1
+    endpoint: /api/app/posts/findByRestaurant
+    method: GET
+    response:
+      success: boolean
+      message: string
+      posts: []
+      pagination: object
+
+  - name: friends_choices_this_week
+    description: Find which of the current user’s friends have made a choice (interest, booking, or participation) during this week.
+    parameters:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: number
+          description: The ID of the current user.
+    endpoint: /api/app/friends/choices-this-week
+    method: GET
+    response:
+      success: boolean
+      message: string
+      friends: []
+
+  - name: find_places_by_rating
+    description: Find restaurants, wellness, or leisure places filtered by specific ratings (1–5 stars).
+    parameters:
+      type: object
+      required: [ratings]
+      properties:
+        ratings:
+          type: array
+          items:
+            type: number
+          description: List of star ratings to filter by (e.g., [4, 5]).
+        type:
+          type: string
+          enum: [restaurant, wellness, leisure]
+          description: Optional producer type to filter results by.
+        limit:
+          type: number
+          description: Maximum number of results to return. Default is 10.
+          default: 10
+    endpoint: /api/app/producers/findByRating
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        producers: []
+
+  - name: find_most_visited_restaurants
+    description: Find the most visited restaurants based on how many people made Choice posts there.
+    parameters:
+      limit: number
+    endpoint: /api/app/producer/mostVisited
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        - id: number
+          name: string
+          type: string
+          address: string
+          latitude: number
+          longitude: number
+          post_count: number
+
+  - name: check_restaurant_availability
+    description: "Check available slots for a specific restaurant name."
+    parameters:
+    restaurant_name: string
+    endpoint: /api/app/slots/checkAvailabilityByName
+    method: GET
+    response: success, message, data[]
+
+  - name: find_open_wellness_studios
+    description: "List all wellness studios that are currently open (based on UTC time)."
+    parameters: {}
+    endpoint: /api/app/producer/findOpenWellnessStudios
+    method: GET
+    response: success, message, data[]
