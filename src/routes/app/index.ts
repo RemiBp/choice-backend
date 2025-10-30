@@ -5,6 +5,7 @@ import BookingRouter from './booking.route';
 import ProducerBlockRouter from '../producer/block.routes';
 import ProducerReportRouter from '../producer/report.routes';
 import UserInterestRouter from './interest.router';
+import UserMapRouter from './maps.routes';
 
 const AppRouter = Router();
 AppRouter.get('/', (req, res) => {
@@ -17,5 +18,6 @@ AppRouter.use('/booking', BookingRouter);
 AppRouter.use('/blocking', ProducerBlockRouter);
 AppRouter.use('/report', ProducerReportRouter);
 AppRouter.use('/interest', UserInterestRouter);
+AppRouter.use('/maps', UserMapRouter);
 
 export default AppRouter;

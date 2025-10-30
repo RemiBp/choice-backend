@@ -1,4 +1,4 @@
-import { AccountDeleteSchema, PreSignedURL, UpdateProfileSchema } from '../../validators/app/user.profile.validation';
+import { AccountDeleteSchema, PreSignedURL, UpdateLocationPrivacyInput, UpdateProfileSchema } from '../../validators/app/user.profile.validation';
 import {
   BlockRepository,
   BookingRepository,
@@ -7,6 +7,7 @@ import {
   FavouriteRestaurantRepository,
   FollowRepository,
   HelpAndSupportRepository,
+  LocationPrivacyRepository,
   NotificationRepository,
   PasswordRepository,
   RestaurantRepository,
@@ -21,6 +22,7 @@ import { NotFoundError } from '../../errors/notFound.error';
 import { In } from 'typeorm';
 import Block from '../../models/Block';
 import PostgresDataSource from '../../data-source';
+import { LocationPrivacyMode } from '../../enums/LocationPrivacy.enum';
 import { FollowStatusEnums } from '../../enums/followStatus.enum';
 import User from '../../models/User';
 import Follow from '../../models/Follow';
@@ -686,8 +688,98 @@ export const readNotification = async (
   }
 };
 
+export const updateLocationPrivacy = async (userId: number, data: UpdateLocationPrivacyInput) => {
+  const { mode, includedFriendIds, excludedFriendIds, isSharingEnabled } = data;
 
+  let privacy = await LocationPrivacyRepository.findOne({ where: { userId } });
 
+  if (!privacy) {
+    privacy = LocationPrivacyRepository.create({
+      userId,
+      mode,
+      includedFriendIds,
+      excludedFriendIds,
+      isSharingEnabled,
+    });
+  } else {
+    privacy.mode = mode;
+    privacy.includedFriendIds = includedFriendIds ?? [];
+    privacy.excludedFriendIds = excludedFriendIds ?? [];
+    privacy.isSharingEnabled = isSharingEnabled;
+  }
+
+  await LocationPrivacyRepository.save(privacy);
+  return privacy;
+};
+
+export const getLocationPrivacy = async (userId: number) => {
+  const privacy = await LocationPrivacyRepository.findOne({ where: { userId } });
+  if (!privacy)
+    return {
+      isSharingEnabled: false, // Not sharing initially
+      mode: LocationPrivacyMode.NOT_SHARED,
+      includedFriendIds: [],
+      excludedFriendIds: [],
+    };
+  return privacy;
+};
+
+export const canViewLocation = async (ownerUserId: number, viewerUserId: number): Promise<boolean> => {
+  // Owner can always see their own location
+  if (ownerUserId === viewerUserId) return true;
+
+  // Fetch privacy settings
+  const privacy = await LocationPrivacyRepository.findOne({
+    where: { userId: ownerUserId },
+  });
+
+  // Default: visible if no privacy record
+  if (!privacy) return true;
+
+  // Disabled sharing globally
+  if (!privacy.isSharingEnabled) return false;
+
+  // Check privacy mode
+  switch (privacy.mode) {
+    case LocationPrivacyMode.MY_FRIENDS: {
+      return await areFriends(ownerUserId, viewerUserId);
+    }
+
+    case LocationPrivacyMode.MY_FRIENDS_EXCEPT: {
+      if (privacy.excludedFriendIds.includes(viewerUserId)) return false;
+      return await areFriends(ownerUserId, viewerUserId);
+    }
+
+    case LocationPrivacyMode.ONLY_THESE_FRIENDS: {
+      return privacy.includedFriendIds.includes(viewerUserId);
+    }
+
+    default:
+      return false;
+  }
+};
+
+// Determine if two users are friends (mutual followers) Uses the Follow table to verify a two-way relationship.
+const areFriends = async (userAId: number, userBId: number): Promise<boolean> => {
+  // UserA follows UserB
+  const followAtoB = await FollowRepository.findOne({
+    where: {
+      follower: { id: userAId },
+      followedUser: { id: userBId },
+    },
+  });
+
+  // UserB follows UserA
+  const followBtoA = await FollowRepository.findOne({
+    where: {
+      follower: { id: userBId },
+      followedUser: { id: userAId },
+    },
+  });
+
+  // They are friends if both follow each other
+  return !!(followAtoB && followBtoA);
+};
 
 
 

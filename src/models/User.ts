@@ -9,6 +9,7 @@ import {
   OneToOne,
   ManyToMany,
   JoinTable,
+  JoinColumn,
 } from 'typeorm';
 import Roles from './Role';
 import PasswordResetOTP from './PasswordResetOTP';
@@ -42,6 +43,7 @@ import Chat from './Chat';
 import Block from './Block';
 import Report from './Report';
 import Interest from './Interest';
+import LocationPrivacy from './LocationPrivacy';
 
 @Entity('Users')
 export default class User {
@@ -165,6 +167,12 @@ export default class User {
 
   @OneToMany(() => Report, (report) => report.reportedUser)
   reportsReceived: Report[];
+
+  @OneToOne(() => LocationPrivacy, (privacy) => privacy.user, {
+    cascade: true,
+  })
+  @JoinColumn({ name: 'locationPrivacyId' })
+  locationPrivacy: LocationPrivacy;
 
   // Social Module Relations
   @OneToMany(() => Post, post => post.user, { cascade: true })

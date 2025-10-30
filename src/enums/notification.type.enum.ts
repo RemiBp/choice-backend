@@ -9,6 +9,7 @@ export enum NotificationTypeEnums {
   BOOKING_CUSTOMER_CHECKIN = 'bookingCustomerCheckin',
   BOOKING_UPDATED = 'bookingUpdated',
   CHAT_MESSAGE = 'chatMessage',
+  OFFER = "OFFER",
 
   // Interest Flow
   INTEREST_INVITE = 'interestInvite',

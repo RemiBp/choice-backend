@@ -8,6 +8,7 @@ export enum NotificationStatusCode {
   BOOKING_START_REMINDER = 7,
   BOOKING_CUSTOMER_CHECKIN = 8,
   BOOKING_UPDATED = 9,
+  OFFER_SENT = 10,
   CHAT_MESSAGE = 10,
 
   // Interest Flow

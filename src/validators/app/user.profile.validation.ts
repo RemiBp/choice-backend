@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LocationPrivacyMode } from '../../enums/LocationPrivacy.enum';
 
 export const presignedURLSchema = z.object({
   fileName: z.string(),
@@ -35,6 +36,15 @@ export const accountDeleteSchema = z.object({
 });
 
 export type AccountDeleteSchema = z.infer<typeof accountDeleteSchema>;
+
+export const UpdateLocationPrivacySchema = z.object({
+  isSharingEnabled: z.boolean().default(true),
+  mode: z.nativeEnum(LocationPrivacyMode),
+  includedFriendIds: z.array(z.number()).optional().default([]),
+  excludedFriendIds: z.array(z.number()).optional().default([]),
+});
+
+export type UpdateLocationPrivacyInput = z.infer<typeof UpdateLocationPrivacySchema>;
 
 export * as ProfileSchema from './user.profile.validation';
 
