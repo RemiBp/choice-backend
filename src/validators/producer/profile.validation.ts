@@ -43,6 +43,14 @@ export const presignedURLSchema = z
 
 export type PreSignedURL = z.infer<typeof presignedURLSchema>;
 
+export const multiPresignedURLSchema = z.object({
+  files: z
+    .array(presignedURLSchema)
+    .nonempty("At least one file object is required"),
+});
+
+export type multiPresignedURL = z.infer<typeof multiPresignedURLSchema>;
+
 export const ProducerDocumentSchema = z.object({
   type: z.string().min(1, "Document type is required"),
   fileUrl: z.string().min(1, "File URL is required"),

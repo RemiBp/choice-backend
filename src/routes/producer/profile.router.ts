@@ -29,6 +29,7 @@ ProducerProfileRouter.post('/generateSlots', ProfileController.generateSlots);
 
 // ProducerProfileRouter.get('/getProfile', ProfileController.getProfile);
 ProducerProfileRouter.post('/getPreSignedUrl', ProfileController.getPreSignedUrl);
+ProducerProfileRouter.post('/getMultiplePreSignedUrl', ProfileController.getMultiplePreSignedUrl);
 ProducerProfileRouter.post('/changeCurrentPassword', ProfileController.changeCurrentPassword);
 ProducerProfileRouter.get('/getDeleteReasons', ProfileController.getDeleteReasons);
 ProducerProfileRouter.delete('/deleteAccount/:id', ProfileController.deleteAccount);

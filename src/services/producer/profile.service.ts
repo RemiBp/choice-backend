@@ -251,6 +251,25 @@ export const getPreSignedUrl = async (userId: number, getPreSignedURLObject: Pre
   }
 };
 
+export const getMultiplePreSignedUrl = async (userId: number, files: PreSignedURL[]) => {
+  const user = await UserRepository.findOne({ where: { id: userId } });
+  if (!user) throw new NotFoundError("User not found.");
+
+  const urls = await Promise.all(
+    files.map(async ({ fileName, contentType, folderName }) => {
+      const { url, keyName } = await s3Service.getPresignedUploadUrl(
+        fileName,
+        contentType,
+        true,
+        folderName
+      );
+      return { url, keyName };
+    })
+  );
+
+  return urls;
+};
+
 export const changeCurrentPassword = async (userId: number, newPassword: string) => {
   try {
     const user = await UserRepository.findOne({
