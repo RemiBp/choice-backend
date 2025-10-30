@@ -43,12 +43,35 @@ export const presignedURLSchema = z
 
 export type PreSignedURL = z.infer<typeof presignedURLSchema>;
 
+export const multiPresignedURLSchema = z.object({
+  files: z
+    .array(presignedURLSchema)
+    .nonempty("At least one file object is required"),
+});
+
+export type multiPresignedURL = z.infer<typeof multiPresignedURLSchema>;
+
 export const ProducerDocumentSchema = z.object({
   type: z.string().min(1, "Document type is required"),
   fileUrl: z.string().min(1, "File URL is required"),
 });
 
 export type ProducerDocumentInput = z.infer<typeof ProducerDocumentSchema>;
+
+export const ProducerDocumentsUpdateSchema = z.object({
+  document1: z
+    .string()
+    .min(1, "Document1 cannot be empty")
+    .optional(),
+  document1Expiry: z.coerce.date().optional(),
+  document2: z
+    .string()
+    .min(1, "Document2 cannot be empty")
+    .optional(),
+  document2Expiry: z.coerce.date().optional(),
+});
+
+export type ProducerDocumentsUpdateInput = z.infer<typeof ProducerDocumentsUpdateSchema>;
 
 export const updateProfileSchema = z.object({
   businessName: z.string({ required_error: 'Business name is required' }).trim(),
@@ -67,6 +90,17 @@ export const updateProfileSchema = z.object({
 });
 
 export type UpdateProfileSchema = z.infer<typeof updateProfileSchema>;
+
+export const updatePasswordSchema = z.object({
+  currentPassword: z.string().min(6, "Current password is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
+  confirmPassword: z.string().min(8, "Confirm password is required"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+export type UpdatePasswordSchema = z.infer<typeof updatePasswordSchema>;
 
 const dayHourSchema = z
   .object({

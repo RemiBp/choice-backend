@@ -24,6 +24,8 @@ import PostgresDataSource from '../../data-source';
 import { FollowStatusEnums } from '../../enums/followStatus.enum';
 import User from '../../models/User';
 import Follow from '../../models/Follow';
+import bcrypt from 'bcrypt';
+import { UpdatePasswordSchema } from '../../validators/producer/profile.validation';
 
 export const updateProfile = async (userId: number, updateProfileObject: UpdateProfileSchema) => {
   try {
@@ -40,6 +42,45 @@ export const updateProfile = async (userId: number, updateProfileObject: UpdateP
     return { message: "Profile updated successfully" };
   } catch (error) {
     console.error("Error in updateProfile", { error });
+    throw error;
+  }
+};
+
+export const updatePassword = async (userId: number, payload: UpdatePasswordSchema) => {
+  try {
+    const { currentPassword, newPassword } = payload;
+
+    // Find the user with the Password relation
+    const user = await UserRepository.findOne({
+      where: { id: userId },
+      relations: ["Password"],
+    });
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    if (!user.Password) {
+      throw new NotFoundError("Password record not found for this user");
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.Password.password);
+    if (!isMatch) {
+      throw new BadRequestError("Current password is incorrect");
+    }
+
+    // Hash and update new password
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
+    user.Password.password = newHashedPassword;
+
+    await PasswordRepository.save(user.Password);
+
+    return {
+      message: "Password updated successfully",
+    };
+  } catch (error) {
+    console.error("Error in PasswordService.updatePassword", { error });
     throw error;
   }
 };

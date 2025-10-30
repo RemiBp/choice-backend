@@ -43,7 +43,7 @@ import { BusinessRole } from '../../enums/Producer.enum';
 import { ProducerStatus } from '../../enums/producerStatus.enum';
 import { getPresignedUploadUrl } from '../../utils/s3Service';
 import s3Service from '../s3.service';
-import { PreSignedURL, ProducerDocumentInput } from '../../validators/producer/profile.validation';
+import { PreSignedURL, ProducerDocumentInput, ProducerDocumentsUpdateInput } from '../../validators/producer/profile.validation';
 import Producer from '../../models/Producer';
 
 // export const createProducer = async (input: CreateProducer) => {
@@ -124,53 +124,121 @@ export const register = async (signUpInput: SignUp) => {
   await queryRunner.startTransaction();
 
   try {
-    const { email, password, businessName, role, latitude, longitude } = signUpInput;
+    const {
+      email,
+      password,
+      businessName,
+      role,
+      latitude,
+      longitude,
+      claimProducerId,
+    } = signUpInput;
 
+    const lowerEmail = email.toLowerCase();
+
+    // CLAIM FLOW
+    if (claimProducerId) {
+      const existingProducer = await queryRunner.manager.findOne(ProducerRepository.target, {
+        where: { id: claimProducerId },
+      });
+      if (!existingProducer) throw new BadRequestError("Producer not found");
+      if (existingProducer.userId)
+        throw new BadRequestError("This business has already been claimed");
+
+      const existingUser = await queryRunner.manager.findOne(UserRepository.target, {
+        where: { email: lowerEmail },
+      });
+      if (existingUser) throw new BadRequestError("Email already exists");
+
+      const hashedPassword = await generateHashedPassword(password);
+      const roleName = role || existingProducer.type;
+      const userRole = await queryRunner.manager.findOne(RolesRepository.target, {
+        where: { name: roleName },
+      });
+      if (!userRole) throw new BadRequestError(`Role not found: ${roleName}`);
+
+      let savedUser;
+      try {
+        const newUser = UserRepository.create({
+          email: lowerEmail,
+          role: userRole,
+          isVerified: false,
+        });
+        savedUser = await queryRunner.manager.save(UserRepository.target, newUser);
+      } catch (err: any) {
+        if (err.code === "23505" && err.detail?.includes("email")) {
+          throw new BadRequestError("Email already exists");
+        }
+        throw err;
+      }
+
+      await queryRunner.manager.save(PasswordRepository.target, {
+        user: savedUser,
+        password: hashedPassword,
+      });
+
+      existingProducer.user = savedUser;
+      existingProducer.userId = savedUser.id;
+      existingProducer.status = ProducerStatus.CLAIMED;
+      await queryRunner.manager.save(ProducerRepository.target, existingProducer);
+
+      await queryRunner.commitTransaction();
+
+      const otp = "000000";
+      await SignUpOTPRepository.save({ user: savedUser, otp });
+
+      return {
+        message: "Business claimed successfully. OTP sent for verification.",
+        producerId: existingProducer.id,
+        businessName: existingProducer.name,
+        status: existingProducer.status,
+      };
+    }
+
+    // NORMAL REGISTER FLOW
     const existingUser = await queryRunner.manager.findOne(UserRepository.target, {
-      where: { email: email.toLowerCase() },
+      where: { email: lowerEmail },
     });
 
     if (existingUser && !existingUser.isVerified) {
       const allOtps = await SignUpOTPRepository.find({
         where: { user: { id: existingUser.id } },
       });
-      if (allOtps.length > 0) {
-        await SignUpOTPRepository.remove(allOtps);
-      }
-      const otp = '000000';
-      await SignUpOTPRepository.save({
-        user: existingUser,
-        otp,
-      });
-      return {
-        isVerified: false,
-        message: 'OTP sent successfully',
-      };
+      if (allOtps.length > 0) await SignUpOTPRepository.remove(allOtps);
+
+      const otp = "000000";
+      await SignUpOTPRepository.save({ user: existingUser, otp });
+
+      return { isVerified: false, message: "OTP sent successfully" };
     }
 
-    if (existingUser) throw new BadRequestError('Email already exists');
+    if (existingUser) throw new BadRequestError("Email already exists");
 
     const existingBusiness = await queryRunner.manager.findOne(BusinessProfileRepository.target, {
       where: { businessName },
     });
-
-    if (existingBusiness) throw new BadRequestError('Business is already registered');
+    if (existingBusiness) throw new BadRequestError("Business is already registered");
 
     const hashedPassword = await generateHashedPassword(password);
-
     const userRole = await queryRunner.manager.findOne(RolesRepository.target, {
       where: { name: role },
     });
+    if (!userRole) throw new BadRequestError("Role not found");
 
-    if (!userRole) throw new BadRequestError('Role not found');
-
-    const newUser = UserRepository.create({
-      email: email.toLowerCase(),
-      role: userRole,
-      isVerified: false,
-    });
-
-    const savedUser = await queryRunner.manager.save(UserRepository.target, newUser);
+    let savedUser;
+    try {
+      const newUser = UserRepository.create({
+        email: lowerEmail,
+        role: userRole,
+        isVerified: false,
+      });
+      savedUser = await queryRunner.manager.save(UserRepository.target, newUser);
+    } catch (err: any) {
+      if (err.code === "23505" && err.detail?.includes("email")) {
+        throw new BadRequestError("Email already exists");
+      }
+      throw err;
+    }
 
     await queryRunner.manager.save(PasswordRepository.target, {
       user: savedUser,
@@ -181,15 +249,14 @@ export const register = async (signUpInput: SignUp) => {
       businessName,
       user: savedUser,
     });
-
     await queryRunner.manager.save(BusinessProfileRepository.target, businessProfile);
 
     const producer = ProducerRepository.create({
       name: businessName,
-      address: '',
+      address: "",
       placeId: `${savedUser.id}`,
       type: role as BusinessRole,
-      status: ProducerStatus.PENDING,
+      status: ProducerStatus.APPROVED,
       isActive: true,
       isDeleted: false,
       user: savedUser,
@@ -198,43 +265,36 @@ export const register = async (signUpInput: SignUp) => {
       producer.latitude = latitude;
       producer.longitude = longitude;
       producer.locationPoint = {
-        type: 'Point',
+        type: "Point",
         coordinates: [longitude, latitude],
       };
     }
 
     await queryRunner.manager.save(ProducerRepository.target, producer);
 
-    // Insert into child table depending on role
+    // Sub-records
     if (role === BusinessRole.LEISURE) {
-      const leisure = LeisureRepository.create({ producerId: producer.id });
-      await queryRunner.manager.save(LeisureRepository.target, leisure);
-    }
-
-    if (role === BusinessRole.RESTAURANT) {
-      const restaurant = RestaurantRatingRepository.create({ producerId: producer.id });
-      await queryRunner.manager.save(RestaurantRatingRepository.target, restaurant);
-    }
-
-    if (role === BusinessRole.WELLNESS) {
-      const wellness = WellnessRepository.create({ producerId: producer.id });
-      await queryRunner.manager.save(WellnessRepository.target, wellness);
+      await queryRunner.manager.save(LeisureRepository.target, { producerId: producer.id });
+    } else if (role === BusinessRole.RESTAURANT) {
+      await queryRunner.manager.save(RestaurantRatingRepository.target, { producerId: producer.id });
+    } else if (role === BusinessRole.WELLNESS) {
+      await queryRunner.manager.save(WellnessRepository.target, { producerId: producer.id });
     }
 
     await queryRunner.commitTransaction();
 
-    const otp = '000000';
-    await SignUpOTPRepository.save({
-      user: savedUser,
-      otp,
-    });
+    const otp = "000000";
+    await SignUpOTPRepository.save({ user: savedUser, otp });
 
-    return {
-      message: 'OTP sent successfully',
-    };
-  } catch (error) {
+    return { message: "OTP sent successfully" };
+  } catch (error: any) {
     await queryRunner.rollbackTransaction();
-    console.error('Error in business register:', error);
+
+    // clean user-friendly message fallback
+    if (error.code === "23505" && error.detail?.includes("email")) {
+      throw new BadRequestError("Email already exists");
+    }
+    console.error("Error in business register:", error);
     throw error;
   } finally {
     await queryRunner.release();
@@ -425,6 +485,40 @@ export const saveDocument = async (userId: number, document: ProducerDocumentInp
     fileUrl: saved.fileUrl,
     producerId: producer.id,
     createdAt: saved.createdAt,
+  };
+};
+
+export const getProducerDocuments = async (userId: number) => {
+  const producer = await ProducerRepository.findOne({ where: { userId } });
+  if (!producer) throw new NotFoundError("Producer not found");
+
+  return {
+    document1: producer.document1,
+    document1Expiry: producer.document1Expiry,
+    document2: producer.document2,
+    document2Expiry: producer.document2Expiry,
+  };
+};
+
+export const updateProducerDocuments = async (userId: number, data: ProducerDocumentsUpdateInput) => {
+  const producer = await ProducerRepository.findOne({ where: { userId } });
+  if (!producer) throw new NotFoundError("Producer not found");
+
+  // safely merge only defined fields
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined) (producer as any)[key] = value;
+  });
+
+  const saved = await ProducerRepository.save(producer);
+  console.log("🚀 ~ updateProducerDocuments ~ saved:", saved)
+
+  return {
+    id: saved.id,
+    document1: saved.document1,
+    document1Expiry: saved.document1Expiry,
+    document2: saved.document2,
+    document2Expiry: saved.document2Expiry,
+    updatedAt: saved.updatedAt,
   };
 };
 

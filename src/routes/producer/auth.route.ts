@@ -15,6 +15,8 @@ ProducerAuthRouter.post('/login', AuthController.login);
 ProducerAuthRouter.post('/verifyOtp', AuthController.verifyOtp);
 ProducerAuthRouter.post('/switchProfile', authenticateJWT, AuthController.switchProfile );
 ProducerAuthRouter.post('/saveDocument', authenticateJWT, AuthController.saveDocument);
+ProducerAuthRouter.get('/getProducerDocuments', authenticateJWT, AuthController.getProducerDocuments);
+ProducerAuthRouter.put('/updateProducerDocuments', authenticateJWT, AuthController.updateProducerDocuments);
 ProducerAuthRouter.post('/getPreSignedUrl', authenticateBothJWT, AuthController.getPreSignedUrl);
 ProducerAuthRouter.post('/submitDocuments', authenticateJWT, AuthController.submitDocuments);
 ProducerAuthRouter.post('/resendSignUpOtp', AuthController.resendSignUpOtp);

@@ -15,6 +15,7 @@ ProducerProfileRouter.use(authenticateJWT);
 ProducerProfileRouter.use(checkStatus);
 
 ProducerProfileRouter.put('/updateProfile', ProfileController.updateProfile);
+ProducerProfileRouter.patch('/updatePassword', ProfileController.updatePassword);
 ProducerProfileRouter.get('/getProfile', ProfileController.getProfile);
 ProducerProfileRouter.delete('/deleteProfile', ProfileController.deleteProfile);
 ProducerProfileRouter.post('/setOperationalHours', ProfileController.setOperationalHours);
@@ -28,6 +29,7 @@ ProducerProfileRouter.post('/generateSlots', ProfileController.generateSlots);
 
 // ProducerProfileRouter.get('/getProfile', ProfileController.getProfile);
 ProducerProfileRouter.post('/getPreSignedUrl', ProfileController.getPreSignedUrl);
+ProducerProfileRouter.post('/getMultiplePreSignedUrl', ProfileController.getMultiplePreSignedUrl);
 ProducerProfileRouter.post('/changeCurrentPassword', ProfileController.changeCurrentPassword);
 ProducerProfileRouter.get('/getDeleteReasons', ProfileController.getDeleteReasons);
 ProducerProfileRouter.delete('/deleteAccount/:id', ProfileController.deleteAccount);

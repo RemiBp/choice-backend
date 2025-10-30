@@ -14,6 +14,7 @@ UserProfileRouter.use(authenticateUserJWT);
 UserProfileRouter.use(checkStatus);
 
 UserProfileRouter.put('/updateProfile', ProfileController.updateProfile);
+UserProfileRouter.patch('/updatePassword', ProfileController.updatePassword);
 UserProfileRouter.get('/getProfile', ProfileController.getProfile);
 UserProfileRouter.get('/searchUsers', attachBlockedUsers, ProfileController.searchUsers);
 UserProfileRouter.get('/getUserDetail/:userId', attachBlockedUsers, ProfileController.getUserDetail);

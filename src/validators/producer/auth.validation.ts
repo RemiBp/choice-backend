@@ -28,10 +28,11 @@ export const signUpSchema = z.object({
     .email({ message: 'Invalid email' })
     .transform(val => val.toLowerCase()),
   password: z.string({ required_error: 'Password is required' }).trim(),
-  businessName: z.string().trim().min(2),
-  role: z.enum(businessRoles),
+  businessName: z.string().trim().min(2).optional(),
+  role: z.enum(businessRoles).optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  claimProducerId: z.number().optional(),
 });
 
 export type SignUp = z.infer<typeof signUpSchema>;
