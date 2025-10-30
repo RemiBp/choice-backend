@@ -522,6 +522,33 @@ export const updateProducerDocuments = async (userId: number, data: ProducerDocu
   };
 };
 
+export const deleteDocument = async (userId: number, documentField: string) => {
+  const producer = await ProducerRepository.findOne({ where: { userId } });
+  if (!producer) throw new NotFoundError("Producer not found");
+
+  // only allow these document fields
+  if (!["document1", "document2"].includes(documentField)) {
+    throw new BadRequestError("Invalid document field");
+  }
+
+  const key = (producer as any)[documentField];
+  if (!key) throw new BadRequestError("No document found to delete");
+
+  // Delete from S3 using your existing service
+  await s3Service.deleteObject(key);
+
+  // Clear from DB
+  (producer as any)[documentField] = null;
+  (producer as any)[`${documentField}Expiry`] = null;
+
+  await ProducerRepository.save(producer);
+
+  return {
+    id: producer.id,
+    deletedField: documentField,
+  };
+};
+
 export const getPreSignedUrl = async (userId: number, getPreSignedURLObject: PreSignedURL) => {
   try {
     const { fileName, contentType, folderName } = getPreSignedURLObject;

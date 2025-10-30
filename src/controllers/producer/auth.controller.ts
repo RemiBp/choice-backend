@@ -107,6 +107,22 @@ export const updateProducerDocuments = async (req: Request, res: Response, next:
   }
 };
 
+export const deleteDocument = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    const { documentField } = req.body; // e.g. "document1" or "document2"
+
+    if (!userId) throw new Error("User ID is required");
+    if (!documentField) throw new Error("documentField is required");
+
+    const result = await AuthService.deleteDocument(userId, documentField);
+
+    return sendApiResponse(res, 200, "Producer document deleted successfully", result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getPreSignedUrl = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;
