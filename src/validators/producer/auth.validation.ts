@@ -67,10 +67,10 @@ export const getPresignedDocumentSchema = z.object({
 export type GetPresignedDocumentInput = z.infer<typeof getPresignedDocumentSchema>;
 
 export const submitDocumentsSchema = z.object({
-  document1: z.string().min(1, 'Document 1 is required'),
-  document1Expiry: z.coerce.date({ required_error: 'Document 1 expiry date is required' }),
-  document2: z.string().min(1, 'Document 2 is required'),
-  document2Expiry: z.coerce.date({ required_error: 'Document 2 expiry date is required' }),
+  document1: z.string().optional(),
+  document1Expiry: z.coerce.date().optional(),
+  document2: z.string().optional(),
+  document2Expiry: z.coerce.date().optional(),
 });
 
 export type SubmitDocumentsInput = z.infer<typeof submitDocumentsSchema>;
