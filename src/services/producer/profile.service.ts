@@ -10,6 +10,7 @@ import {
   SetMainImageSchema,
   SetOperationHoursSchema,
   SetServiceTypeInput,
+  UpdatePasswordSchema,
   UpdateProfileSchema,
   UploadRestaurantImagesSchema,
 } from '../../validators/producer/profile.validation';
@@ -55,6 +56,7 @@ import { BusinessRole } from '../../enums/Producer.enum';
 import MenuCategory from '../../models/MenuCategory';
 import MenuDishes from '../../models/MenuDishes';
 import PostgresDataSource from '../../data-source';
+import bcrypt from 'bcrypt';
 
 export const getAllServiceType = async () => {
   const serviceTypes = await WellnessServiceTypeRepository.find({
@@ -63,10 +65,7 @@ export const getAllServiceType = async () => {
   return serviceTypes;
 };
 
-export const updateProfile = async (
-  userId: number,
-  updateProfileObject: UpdateProfileSchema
-) => {
+export const updateProfile = async (userId: number, updateProfileObject: UpdateProfileSchema) => {
   try {
     const user = await UserRepository.findOne({
       where: { id: userId },
@@ -85,6 +84,7 @@ export const updateProfile = async (
     // Update Producer Info
     // --------------------
     Object.assign(user.producer, {
+      name: updateProfileObject.businessName,
       address: updateProfileObject.address,
       city: updateProfileObject.city,
       country: updateProfileObject.country,
@@ -115,10 +115,18 @@ export const updateProfile = async (
     await BusinessProfileRepository.save(user.businessProfile);
     await UserRepository.save(user);
 
+    let businessProfile = null;
+    if (user.businessProfile) {
+      // Exclude certain fields from response
+      const { businessName, address, city, latitude, longitude, phoneNumber, ...rest } =
+        user.businessProfile;
+      businessProfile = rest;
+    }
+
     return {
       message: "Profile updated successfully",
       producer: user.producer,
-      businessProfile: user.businessProfile,
+      businessProfile,
     };
   } catch (error) {
     console.error("Error in updateProfile", { error });
@@ -126,24 +134,64 @@ export const updateProfile = async (
   }
 };
 
+export const updatePassword = async (userId: number, payload: UpdatePasswordSchema) => {
+  try {
+    const { currentPassword, newPassword } = payload;
+
+    // Find the user with the Password relation
+    const user = await UserRepository.findOne({
+      where: { id: userId },
+      relations: ["Password"],
+    });
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    if (!user.Password) {
+      throw new NotFoundError("Password record not found for this user");
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.Password.password);
+    if (!isMatch) {
+      throw new BadRequestError("Current password is incorrect");
+    }
+
+    // Hash and update new password
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
+    user.Password.password = newHashedPassword;
+
+    await PasswordRepository.save(user.Password);
+
+    return {
+      message: "Password updated successfully",
+    };
+  } catch (error) {
+    console.error("Error in PasswordService.updatePassword", { error });
+    throw error;
+  }
+};
 
 export const getProfile = async (userId: number) => {
   const user = await UserRepository.findOne({
     where: { id: userId },
-    relations: ['businessProfile', 'producer', 'producer.cuisineType'],
+    relations: ["producer", "businessProfile"],
   });
 
-  if (!user) {
-    throw new NotFoundError('User not found');
+  if (!user) throw new NotFoundError("User not found");
+
+  let businessProfile = null;
+
+  if (user.businessProfile) {
+    // Exclude specific fields using destructuring
+    const { businessName, address, city, latitude, longitude, phoneNumber, ...rest } = user.businessProfile;
+    businessProfile = rest;
   }
 
   return {
-    email: user.email,
-    phoneNumber: user.phoneNumber,
-    isVerified: user.isVerified,
-    businessProfile: user.businessProfile ? mapBusinessProfile(user.businessProfile) : null,
-    producer: user.producer ? mapProducer(user.producer) : null,
-    cuisineType: user.producer ? user.producer.cuisineType : null,
+    producer: user.producer || null,
+    businessProfile,
   };
 };
 
@@ -201,6 +249,25 @@ export const getPreSignedUrl = async (userId: number, getPreSignedURLObject: Pre
   } catch (error) {
     throw error;
   }
+};
+
+export const getMultiplePreSignedUrl = async (userId: number, files: PreSignedURL[]) => {
+  const user = await UserRepository.findOne({ where: { id: userId } });
+  if (!user) throw new NotFoundError("User not found.");
+
+  const urls = await Promise.all(
+    files.map(async ({ fileName, contentType, folderName }) => {
+      const { url, keyName } = await s3Service.getPresignedUploadUrl(
+        fileName,
+        contentType,
+        true,
+        folderName
+      );
+      return { url, keyName };
+    })
+  );
+
+  return urls;
 };
 
 export const changeCurrentPassword = async (userId: number, newPassword: string) => {
@@ -880,7 +947,7 @@ export const getOperationalHours = async (restaurantId: number) => {
     const operationalHours = await OperationalHourRepository.find({
       where: { user: { id: restaurantId } },
     });
-    return operationalHours;
+    return { data: operationalHours };
   } catch (error) {
     throw error;
   }

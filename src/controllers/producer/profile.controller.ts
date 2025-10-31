@@ -3,6 +3,7 @@ import {
   addMenuDishSchema,
   deleteRestaurantImageSchema,
   getRestaurantImagesSchema,
+  multiPresignedURLSchema,
   presignedURLSchema,
   reviewsAndRatingsSchema,
   setCapacitySchema,
@@ -10,6 +11,7 @@ import {
   setMainImageSchema,
   setOperationHoursSchema,
   setServiceTypeSchema,
+  updatePasswordSchema,
   updateProfileSchema,
   uploadDocumentsSchema,
   uploadRestaurantImagesSchema,
@@ -34,6 +36,18 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
     const validatedObject = updateProfileSchema.parse(req.body);
     const userId = Number(req.userId);
     const response = await ProfileService.updateProfile(userId, validatedObject);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePassword = async (req: Request,res: Response,next: NextFunction) => {
+  try {
+    const validatedData = updatePasswordSchema.parse(req.body);
+    const userId = Number(req.userId);
+
+    const response = await ProfileService.updatePassword(userId, validatedData);
     res.status(200).json(response);
   } catch (error) {
     next(error);
@@ -95,6 +109,24 @@ export const getPreSignedUrl = async (req: Request, res: Response, next: NextFun
     });
     const response = await ProfileService.getPreSignedUrl(userId, validatedObject);
     res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMultiplePreSignedUrl = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId;
+    const parsed = multiPresignedURLSchema.parse(req.body);
+    const { files } = parsed;
+
+    const result = await ProfileService.getMultiplePreSignedUrl(userId, files);
+
+    return res.status(200).json({
+      success: true,
+      message: "Pre-signed URLs generated successfully.",
+      data: result,
+    });
   } catch (error) {
     next(error);
   }

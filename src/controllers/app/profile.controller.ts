@@ -11,12 +11,25 @@ import { BadRequestError } from '../../errors/badRequest.error';
 import { GetUserDetailSchema, SearchUsersSchema } from '../../validators/producer/post.validation';
 import { sendApiResponse } from '../../utils/sendApiResponse';
 import { LocationPrivacyRepository } from '../../repositories';
+import { updatePasswordSchema } from '../../validators/producer/profile.validation';
 
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validatedObject = updateProfileSchema.parse(req.body);
     const userId = Number(req.userId);
     const response = await ProfileService.updateProfile(userId, validatedObject);
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePassword = async (req: Request,res: Response,next: NextFunction) => {
+  try {
+    const validatedData = updatePasswordSchema.parse(req.body);
+    const userId = Number(req.userId);
+
+    const response = await ProfileService.updatePassword(userId, validatedData);
     res.status(200).json(response);
   } catch (error) {
     next(error);
