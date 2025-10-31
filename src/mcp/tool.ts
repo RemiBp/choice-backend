@@ -4,9 +4,11 @@ import { z } from "zod";
 import { getNearbyProducers } from "../services/producer/maps.service";
 import { ProducerType, SortOption } from "../enums/ProducerType.enum";
 import { getFriendsWhoPostedThisWeek, getMostVisitedRestaurants, getOpenWellnessStudios, getPostsByRestaurant, getProducerAvailabilityByName } from "../services/producer/post.service";
+import { ProducerInsightsService } from "../services/producer/insights.service";
 
 const hasNumber = (v: unknown) => typeof v === "number" && Number.isFinite(v);
 
+// User side Tools
 export const findNearbyRestaurants = tool({
     name: "find_nearby_restaurants",
     description: "Find nearby restaurants based on user's location.",
@@ -163,6 +165,92 @@ export const findOpenWellnessStudios = tool({
                 message: "Failed to fetch open wellness studios.",
                 data: null,
             };
+        }
+    },
+});
+
+// Producer side Tools
+export const getMostEngagedItems = tool({
+    name: "get_most_engaged_items",
+    description: "Find which dishes, activities, or services have the highest engagement (likes, bookings, or posts).",
+    parameters: z.object({
+        producerId: z.number().describe("Producer ID whose items to analyze."),
+    }),
+    async execute({ producerId }) {
+        return await ProducerInsightsService.getMostEngagedItems(producerId);
+    },
+});
+
+export const getUpcomingBookings = tool({
+    name: "get_upcoming_bookings",
+    description: "Check all upcoming bookings for the given producer and optional date/time.",
+    parameters: z.object({
+        producerId: z.number(),
+        date: z.string().datetime().nullable(),
+    }),
+    async execute({ producerId, date }) {
+        try {
+            return await ProducerInsightsService.getUpcomingBookings(producerId, date ?? null);
+        } catch (e: any) {
+            const msg = String(e?.message || e);
+            if (msg.includes("No upcoming bookings")) return [];
+            throw e;
+        }
+    },
+});
+
+export const getFriendReferralBookings = tool({
+    name: "get_friend_referral_bookings",
+    description: "List customers who booked through a friend’s referral (interest creator ≠ booking user).",
+    parameters: z.object({
+        producerId: z.number(),
+    }),
+    async execute({ producerId }) {
+        return await ProducerInsightsService.getFriendReferralBookings(producerId);
+    },
+});
+
+export const getMonthlyAverageRating = tool({
+    name: "get_monthly_average_rating",
+    description: "Get the producer’s average customer rating for the current month.",
+    parameters: z.object({ producerId: z.number() }),
+    async execute({ producerId }) {
+        const res = await ProducerInsightsService.getMonthlyAverageRating(producerId);
+        return res; // { averageRating: number }
+    },
+});
+
+export const getCustomersByRating = tool({
+    name: "get_customers_by_rating",
+    description: "List customers grouped by the rating (1–5 stars) they gave.",
+    parameters: z.object({
+        producerId: z.number(),
+        rating: z.number().min(1).max(5),
+    }),
+    async execute({ producerId, rating }) {
+        try {
+            const rows = await ProducerInsightsService.getCustomersByRating(producerId, rating);
+            return rows; // [] when none
+        } catch (e) {
+            // Avoid surfacing internal errors to the agent reply
+            return [];
+        }
+    },
+});
+
+export const searchReviewsByKeyword = tool({
+    name: "search_reviews_by_keyword",
+    description: "Search reviews for mentions of a keyword (e.g., 'food', 'service', 'ambience').",
+    parameters: z.object({
+        producerId: z.number(),
+        keyword: z.string().min(2),
+    }),
+    async execute({ producerId, keyword }) {
+        try {
+            return await ProducerInsightsService.searchReviewsByKeyword(producerId, keyword);
+        } catch {
+            // Return empty list on any "no results" style error
+            return [];
         }
     },
 });

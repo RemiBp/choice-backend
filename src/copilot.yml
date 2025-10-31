@@ -149,3 +149,130 @@ tools:
     endpoint: /api/app/producer/findOpenWellnessStudios
     method: GET
     response: success, message, data[]
+
+  - name: get_most_engaged_items
+    description: "Find which dishes, activities, or services have the highest engagement (likes, shares, bookings)."
+    parameters:
+      type: object
+      required: [producerId]
+      properties:
+        producerId:
+          type: number
+          description: "The ID of the producer whose items to analyze."
+    endpoint: /api/app/producer/insights/most-engaged
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        - id: number
+          title: string
+          engagementScore: number
+
+  - name: get_upcoming_bookings
+    description: "Retrieve all upcoming bookings for the given producer, optionally filtered by date."
+    parameters:
+    type: object
+    required: [producerId, date]
+    properties:
+      producerId: { type: number, description: "Producer ID" }
+      date:
+        type: [string, "null"]
+        format: date-time
+        description: "Optional ISO datetime; null to use now"
+    endpoint: /api/app/producer/insights/upcoming-bookings
+    method: GET
+    response:
+    success: boolean
+    message: string
+    data:
+      - id: number
+        userName: string
+        startDate: string
+        status: string
+
+  - name: get_friend_referral_bookings
+    description: "List bookings where the customer booked through a friend’s referral (interest creator ≠ booking user)."
+    parameters:
+      type: object
+      required: [producerId]
+      properties:
+        producerId:
+          type: number
+          description: "The ID of the producer whose referral bookings to retrieve."
+    endpoint: /api/app/producer/insights/friend-referrals
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        - bookingId: number
+          customerName: string
+          referrerId: number
+          bookedAt: string
+
+  - name: get_monthly_average_rating
+    description: "Calculate the producer’s average customer rating for the current month."
+    parameters:
+      type: object
+      required: [producerId]
+      properties:
+        producerId:
+          type: number
+          description: "The ID of the producer whose rating to calculate."
+    endpoint: /api/app/producer/insights/average-rating
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        averageRating: number
+
+  - name: get_customers_by_rating
+    description: "List customers who rated the producer’s business with a specific star rating (1–5)."
+    parameters:
+      type: object
+      required: [producerId, rating]
+      properties:
+        producerId:
+          type: number
+          description: "The ID of the producer."
+        rating:
+          type: number
+          description: "The specific star rating to filter by (1–5)."
+    endpoint: /api/app/producer/insights/customers-by-rating
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        - ratingId: number
+          userId: number
+          userName: string
+          rating: number
+          comment: string
+          date: string
+
+  - name: search_reviews_by_keyword
+    description: "Search reviews for mentions of a keyword (e.g., 'food', 'service', 'ambience')."
+    parameters:
+    type: object
+    required: [producerId, keyword]
+    properties:
+      producerId:
+        type: number
+        description: "The ID of the producer."
+      keyword:
+        type: string
+        description: "Keyword to search for within review comments."
+    endpoint: /api/app/producer/insights/search-reviews
+    method: GET
+    response:
+    success: boolean
+    message: string
+    data:
+      - reviewId: number
+        userName: string
+        rating: number
+        comment: string
+        date: string

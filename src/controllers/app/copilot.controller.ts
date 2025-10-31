@@ -6,15 +6,13 @@ export const handleQuery = async (req: Request, res: Response, next: NextFunctio
     try {
         const { query } = req.body;
         const userId = Number(req.userId);
-        const role = req.roleName || "user";
 
         if (!query) throw new BadRequestError("Query text is required");
 
-        const result = await CopilotAgentService.handle(userId, role, query);
+        const result = await CopilotAgentService.handle(userId, undefined, query);
 
         return res.status(200).json({
             success: true,
-            role,
             query,
             result,
         });
