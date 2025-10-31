@@ -3,13 +3,10 @@ import dayjs from "dayjs";
 import { BadRequestError } from "../../errors/badRequest.error";
 import { CopilotUsageRepository } from "../../repositories";
 
-// 👇 You can adjust this limit later
 const FREE_QUERY_LIMIT = 20;
 
 
-/**
- * Get or create usage record for a user
- */
+// Get or create usage record for a user
 export const getOrCreateUsage = async (userId: number) => {
     if (!userId) throw new BadRequestError("User ID is required");
 
@@ -36,9 +33,7 @@ export const getOrCreateUsage = async (userId: number) => {
     return usage;
 };
 
-/**
- * Check if user can make a new Copilot query
- */
+// Check if user can make a new Copilot query
 export const checkLimit = async (userId: number, isPro: boolean) => {
     const usage = await getOrCreateUsage(userId);
 
@@ -56,9 +51,7 @@ export const checkLimit = async (userId: number, isPro: boolean) => {
     };
 };
 
-/**
- * Increment Copilot usage count
- */
+// Increment Copilot usage count
 export const incrementUsage = async (userId: number) => {
     const usage = await getOrCreateUsage(userId);
 
@@ -69,9 +62,7 @@ export const incrementUsage = async (userId: number) => {
     return usage;
 };
 
-/**
- * Reset Copilot usage manually (admin/debug)
- */
+// Reset Copilot usage manually (admin/debug)
 export const resetUsage = async (userId: number) => {
     const usage = await getOrCreateUsage(userId);
     usage.monthlyQueries = 0;
@@ -81,7 +72,3 @@ export const resetUsage = async (userId: number) => {
 };
 
 export * as CopilotUsageService from "./copilot.usage.service";
-export function increment(id: any) {
-    throw new Error("Function not implemented.");
-}
-

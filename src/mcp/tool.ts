@@ -2,7 +2,6 @@ import { tool } from "@openai/agents";
 import { z } from "zod";
 import { getNearbyProducers } from "../services/producer/maps.service";
 import { ProducerType, SortOption } from "../enums/ProducerType.enum";
-import { getFriendsWhoPostedThisWeek, getMostVisitedRestaurants, getOpenWellnessStudios, getPostsByRestaurant, getProducerAvailabilityByName } from "../services/producer/post.service";
 import { ProducerInsightsService } from "../services/producer/insights.service";
 
 const hasNumber = (v: unknown) => typeof v === "number" && Number.isFinite(v);
@@ -89,7 +88,7 @@ export const findRestaurantPosts = tool({
         page: z.number().optional().default(1),
     }),
     execute: async ({ restaurantName, page, limit }) => {
-        const result = await getPostsByRestaurant(restaurantName, page, limit);
+        const result = await ProducerInsightsService.getPostsByRestaurant(restaurantName, page, limit);
         return { message: result.message, data: result.data };
     },
 });
@@ -101,7 +100,7 @@ export const friendsPostsThisWeek = tool({
         userId: z.number().describe("The ID of the user making the query"),
     }),
     execute: async ({ userId }) => {
-        const result = await getFriendsWhoPostedThisWeek(userId);
+        const result = await ProducerInsightsService.getFriendsWhoPostedThisWeek(userId);
         return { message: result.message, data: result.data };
     },
 });
@@ -114,7 +113,7 @@ export const findMostVisitedRestaurants = tool({
         limit: z.number().default(10).describe("Maximum number of restaurants to return"),
     }),
     async execute({ limit }) {
-        const result = await getMostVisitedRestaurants(limit);
+        const result = await ProducerInsightsService.getMostVisitedRestaurants(limit);
         return result;
     },
 });
@@ -130,14 +129,14 @@ export const checkRestaurantAvailability = tool({
     }),
     async execute({ restaurant_name }) {
         try {
-            const result = await getProducerAvailabilityByName(restaurant_name);
+            const result = await ProducerInsightsService.getProducerAvailabilityByName(restaurant_name);
 
             return {
                 message: result.message,
                 data: result.data,
             };
         } catch (error: any) {
-            console.error("❌ Error in check_restaurant_availability:", error);
+            console.error("Error in check_restaurant_availability:", error);
             return {
                 message: `Failed to check availability for '${restaurant_name}'.`,
                 data: null,
@@ -152,14 +151,14 @@ export const findOpenWellnessStudios = tool({
     parameters: z.object({}), // no parameters needed
     async execute() {
         try {
-            const result = await getOpenWellnessStudios();
+            const result = await ProducerInsightsService.getOpenWellnessStudios();
 
             return {
                 message: result.message,
                 data: result.data,
             };
         } catch (error: any) {
-            console.error("❌ Error in find_open_wellness_studios:", error);
+            console.error("Error in find_open_wellness_studios:", error);
             return {
                 message: "Failed to fetch open wellness studios.",
                 data: null,

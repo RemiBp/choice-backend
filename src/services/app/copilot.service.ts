@@ -12,7 +12,7 @@ export const CopilotAgentService = {
         if (!userId) throw new BadRequestError("User ID is required");
         if (!query) throw new BadRequestError("Query text is required");
 
-        // 🔹 Fetch user with potential producer relation
+        // Fetch user with potential producer relation
         const user = await UserRepository.findOne({
             where: { id: userId },
             select: ["id", "fullName", "email", "role", "latitude", "longitude"],
@@ -20,16 +20,16 @@ export const CopilotAgentService = {
         });
         if (!user) throw new NotFoundError("User not found");
 
-        // 🔹 Determine role and owner info
+        // Determine role and owner info
         const inferredRole = role || user.role || (user.producer ? "producer" : "user");
         const ownerType = user.producer ? OwnerType.PRODUCER : OwnerType.USER;
         const ownerId = user.producer ? user.producer.id : user.id;
 
-        // 🔹 Get active subscription
+        // Get active subscription
         const sub = await SubscriptionService.getActiveSubscription(ownerId, ownerType);
         const isPro = sub.plan !== SubscriptionPlan.FREE;
 
-        // 🔹 Check query usage limit if on Free plan
+        // Check query usage limit if on Free plan
         const usage = await CopilotUsageService.checkLimit(user.id, isPro);
         if (!usage.allowed) {
             return {
@@ -38,7 +38,7 @@ export const CopilotAgentService = {
             };
         }
 
-        // 🔹 Build Copilot context
+        // Build Copilot context
         const coords =
             user.latitude && user.longitude
                 ? { latitude: user.latitude, longitude: user.longitude }
@@ -61,11 +61,11 @@ export const CopilotAgentService = {
             today: new Date().toISOString().split("T")[0],
         };
 
-        // 🔹 Run the Copilot agent
+        // Run the Copilot agent
         const result = await CopilotAgent.handle(query, context);
 
-        // 🔹 Increment usage if Free plan
-        if (!isPro) await CopilotUsageService.increment(user.id);
+        // Increment usage if Free plan
+        if (!isPro) await CopilotUsageService.incrementUsage(user.id);
 
         return { ...result, plan: sub.plan, remaining: usage.remaining };
     },

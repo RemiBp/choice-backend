@@ -20,10 +20,18 @@ import {
     getRatingBreakdown,
 } from "./tool";
 
+interface CopilotResponse {
+    message: string;
+    data: any;
+    tools?: string[];
+    askUser?: boolean;
+}
 
+// OpenAI client setup
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 setDefaultOpenAIClient(openai);
 
+// Agent Configuration
 const AGENT_CONFIG = {
     name: "ChoiceApp Copilot",
     instructions: [
@@ -39,8 +47,12 @@ const AGENT_CONFIG = {
         "   • find_top_rated_nearby (for 'top', 'best', or 'highest rated')",
         "   • find_most_visited_restaurants (for 'most visited', 'popular', 'famous', etc.)",
         "- If query mentions 'availability' → check_restaurant_availability",
+        "- If query mentions 'open' or 'currently open' but does NOT specify a restaurant name → find_nearby_restaurants",
+        "- If query mentions 'open' AND includes a restaurant name → check_restaurant_availability",
         "- If query mentions 'open wellness' → find_open_wellness_studios",
         "- If query mentions 'friends' or 'choices' → friends_posts_this_week",
+        "- If query mentions 'restaurant posts' or 'posts from restaurants' → find_restaurant_posts.",
+        "- If restaurant name not mentioned, ask: 'Which restaurant’s posts would you like to see?'",
         "",
         "PRODUCER QUERIES:",
         "- If the producer asks about performance, bookings, or ratings, use:",
@@ -61,6 +73,8 @@ const AGENT_CONFIG = {
         "{ message: 'Please provide user coordinates to continue.', data: null }",
         "",
         "If role is not clear from context, ask for clarification.",
+        "",
+        "If a query is unrelated to ChoiceApp (e.g. about space, politics, etc.), respond briefly and suggest relevant topics/tools."
     ].join("\n"),
 
     toolUseBehavior: {
@@ -77,7 +91,7 @@ const AGENT_CONFIG = {
             "get_friend_referral_bookings",
             "get_monthly_average_rating",
             "get_customers_by_rating",
-            "search_reviews_by_keyword",
+            "get_rating_breakdown",
         ],
     },
 
@@ -105,7 +119,8 @@ const AGENT_CONFIG = {
 
 const agent = new Agent(AGENT_CONFIG);
 
-function parseAgentResponse(response: unknown): { message: string; data: any } {
+// Helper: Parse agent output
+function parseAgentResponse(response: unknown): CopilotResponse {
     if (response && typeof response === "object") {
         const r: any = response;
         if (typeof r.message === "string" && "data" in r) return r;
@@ -139,8 +154,83 @@ export const CopilotAgent = {
         ].join("\n");
 
         const result = await run(agent, [system(systemPrompt), user(query)]);
-        const final =
-            (result as any)?.finalToolOutput ?? (result as any)?.finalOutput ?? "";
-        return parseAgentResponse(final);
+        const final = (result as any)?.finalToolOutput ?? (result as any)?.finalOutput ?? "";
+        let parsed = parseAgentResponse(final);
+
+        // Smart Intent Detection
+        const lowerQuery = query.toLowerCase();
+        const mentionsRestaurantPosts =
+            /(restaurant\s*posts|posts\s*from\s*restaurant|show.*restaurant.*post)/i.test(lowerQuery);
+
+        // Needs Clarification (agent didn’t call the tool but query clearly matches an intent)
+        const unclearIntent =
+            mentionsRestaurantPosts && (!parsed.data || parsed.data === null);
+
+        if (unclearIntent) {
+            parsed = {
+                message:
+                    "It sounds like you want to see restaurant posts. Could you tell me the restaurant name?",
+                tools: ["📸 View restaurant posts"],
+                data: null,
+                askUser: true,
+            };
+            return parsed;
+        }
+
+        // Missing parameters after partial understanding
+        const needsClarification =
+            !parsed.data &&
+            /missing|need(ed)?|specify|provide|name|required|parameter/i.test(parsed.message || "");
+
+        if (needsClarification) {
+            parsed = {
+                message:
+                    "I need a bit more detail to continue — for example, which restaurant would you like to see posts from?",
+                tools: ["📸 View restaurant posts", "🍽️ Find nearby restaurants"],
+                data: null,
+                askUser: true,
+            };
+            return parsed;
+        }
+
+        // Out-of-scope fallback
+        const irrelevant =
+            !parsed.data ||
+            /outside the scope|not related|don't understand|scope of this app/i.test(parsed.message || "");
+
+        if (irrelevant) {
+            if (role === "producer") {
+                parsed = {
+                    message:
+                        "I can help you manage your bookings, ratings, and business insights on ChoiceApp.",
+                    tools: [
+                        "📊 View most engaged items",
+                        "📅 See upcoming bookings",
+                        "🎁 Track friend referral bookings",
+                        "⭐ View monthly average ratings",
+                        "👥 See customers by rating",
+                        "📈 Get rating breakdown analytics",
+                    ],
+                    data: null,
+                };
+            } else {
+                parsed = {
+                    message:
+                        "I can help you explore restaurants, wellness studios, and your friends’ favorite places nearby.",
+                    tools: [
+                        "🍽️ Find nearby restaurants",
+                        "🏆 Discover top-rated spots",
+                        "🔥 Explore most-visited restaurants",
+                        "🕒 Check availability for [specific restaurant name]",
+                        "💆 Find open wellness studios",
+                        "📸 View restaurant posts",
+                        "👫 See friends’ recent choices",
+                    ],
+                    data: null,
+                };
+            }
+        }
+
+        return parsed;
     },
 };
