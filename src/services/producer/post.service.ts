@@ -332,6 +332,7 @@ export const getMyPosts = async (userId: number, roleName: string) => {
                 "images",
                 "producer",
                 "user",
+                "postTags.tag",
             ],
             order: { createdAt: "DESC" },
         });
