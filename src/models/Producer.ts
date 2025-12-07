@@ -168,8 +168,8 @@ export default class Producer {
     @ManyToOne(() => CuisineType, cuisineType => cuisineType.producer)
     cuisineType: CuisineType;
 
-      @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  slotDuration: number;
+    @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+    slotDuration: number;
 
     @CreateDateColumn()
     createdAt: Date;

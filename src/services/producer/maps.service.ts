@@ -65,9 +65,18 @@ export const getNearbyProducers = async (userId: number, data: NearbyProducersIn
     }
 
     // SORTING
-    if (sort === SortOption.RATING)
-        qb.orderBy("p.globalRating", "DESNELSC");
-    else qb.orderBy("distance_km", "ASC");
+    if (sort === SortOption.RATING) {
+        qb.orderBy("p.rating->>'average'", "DESC", "NULLS LAST")
+            .addOrderBy("distance_km", "ASC");
+    } else {
+        qb.orderBy("distance_km", "ASC")
+            .addOrderBy("p.rating->>'average'", "DESC", "NULLS LAST");
+    }
+    // qb.leftJoin("p.globalRating", "gr")
+    //     .addSelect("gr.average", "averageRating")
+    //     .orderBy("gr.average", "DESC")
+    //     .addOrderBy("distance_km", "ASC");
+
 
     const producers = await qb.getRawMany();
 

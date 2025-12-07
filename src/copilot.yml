@@ -1,0 +1,275 @@
+name: choiceapp-copilot
+description: AI Copilot module for ChoiceApp (Customer + Producer roles)
+version: 1.0.0
+
+tools:
+  - name: find_nearby_restaurants
+    description: Find nearby restaurants filtered by location.
+    parameters:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          description: Latitude of the user’s location.
+        longitude:
+          type: number
+          description: Longitude of the user’s location.
+        radius_km:
+          type: number
+          description: Search radius in kilometers.
+          default: 10
+    endpoint: /api/app/maps/getNearbyProducers
+    method: GET
+    response:
+      success: boolean
+      message: string
+      items: []
+      pagination: object
+
+  - name: find_top_rated_nearby
+    description: Show top-rated restaurants and wellness services near the user.
+    parameters:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        radius_km:
+          type: number
+          default: 10
+    endpoint: /api/app/maps/getNearbyProducers
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        restaurants: []
+        wellness: []
+
+  - name: find_restaurant_posts
+    description: Fetch all posts made by a specific restaurant.
+    parameters:
+      type: object
+      required: [restaurantName]
+      properties:
+        restaurantName:
+          type: string
+          description: The name of the restaurant whose posts you want to see.
+        limit:
+          type: number
+          description: Number of posts to return. Default is 10.
+          default: 10
+        page:
+          type: number
+          description: Page number for pagination. Default is 1.
+          default: 1
+    endpoint: /api/app/posts/findByRestaurant
+    method: GET
+    response:
+      success: boolean
+      message: string
+      posts: []
+      pagination: object
+
+  - name: friends_choices_this_week
+    description: Find which of the current user’s friends have made a choice (interest, booking, or participation) during this week.
+    parameters:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: number
+          description: The ID of the current user.
+    endpoint: /api/app/friends/choices-this-week
+    method: GET
+    response:
+      success: boolean
+      message: string
+      friends: []
+
+  - name: find_places_by_rating
+    description: Find restaurants, wellness, or leisure places filtered by specific ratings (1–5 stars).
+    parameters:
+      type: object
+      required: [ratings]
+      properties:
+        ratings:
+          type: array
+          items:
+            type: number
+          description: List of star ratings to filter by (e.g., [4, 5]).
+        type:
+          type: string
+          enum: [restaurant, wellness, leisure]
+          description: Optional producer type to filter results by.
+        limit:
+          type: number
+          description: Maximum number of results to return. Default is 10.
+          default: 10
+    endpoint: /api/app/producers/findByRating
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        producers: []
+
+  - name: find_most_visited_restaurants
+    description: Find the most visited restaurants based on how many people made Choice posts there.
+    parameters:
+      limit: number
+    endpoint: /api/app/producer/mostVisited
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        - id: number
+          name: string
+          type: string
+          address: string
+          latitude: number
+          longitude: number
+          post_count: number
+
+  - name: check_restaurant_availability
+    description: "Check available slots for a specific restaurant name."
+    parameters:
+    restaurant_name: string
+    endpoint: /api/app/slots/checkAvailabilityByName
+    method: GET
+    response: success, message, data[]
+
+  - name: find_open_wellness_studios
+    description: "List all wellness studios that are currently open (based on UTC time)."
+    parameters: {}
+    endpoint: /api/app/producer/findOpenWellnessStudios
+    method: GET
+    response: success, message, data[]
+
+  - name: get_most_engaged_items
+    description: "Find which dishes, activities, or services have the highest engagement (likes, shares, bookings)."
+    parameters:
+      type: object
+      required: [producerId]
+      properties:
+        producerId:
+          type: number
+          description: "The ID of the producer whose items to analyze."
+    endpoint: /api/app/producer/insights/most-engaged
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        - id: number
+          title: string
+          engagementScore: number
+
+  - name: get_upcoming_bookings
+    description: "Retrieve all upcoming bookings for the given producer, optionally filtered by date."
+    parameters:
+    type: object
+    required: [producerId, date]
+    properties:
+      producerId: { type: number, description: "Producer ID" }
+      date:
+        type: [string, "null"]
+        format: date-time
+        description: "Optional ISO datetime; null to use now"
+    endpoint: /api/app/producer/insights/upcoming-bookings
+    method: GET
+    response:
+    success: boolean
+    message: string
+    data:
+      - id: number
+        userName: string
+        startDate: string
+        status: string
+
+  - name: get_friend_referral_bookings
+    description: "List bookings where the customer booked through a friend’s referral (interest creator ≠ booking user)."
+    parameters:
+      type: object
+      required: [producerId]
+      properties:
+        producerId:
+          type: number
+          description: "The ID of the producer whose referral bookings to retrieve."
+    endpoint: /api/app/producer/insights/friend-referrals
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        - bookingId: number
+          customerName: string
+          referrerId: number
+          bookedAt: string
+
+  - name: get_monthly_average_rating
+    description: "Calculate the producer’s average customer rating for the current month."
+    parameters:
+      type: object
+      required: [producerId]
+      properties:
+        producerId:
+          type: number
+          description: "The ID of the producer whose rating to calculate."
+    endpoint: /api/app/producer/insights/average-rating
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        averageRating: number
+
+  - name: get_customers_by_rating
+    description: "List customers who rated the producer’s business with a specific star rating (1–5)."
+    parameters:
+      type: object
+      required: [producerId, rating]
+      properties:
+        producerId:
+          type: number
+          description: "The ID of the producer."
+        rating:
+          type: number
+          description: "The specific star rating to filter by (1–5)."
+    endpoint: /api/app/producer/insights/customers-by-rating
+    method: GET
+    response:
+      success: boolean
+      message: string
+      data:
+        - ratingId: number
+          userId: number
+          userName: string
+          rating: number
+          comment: string
+          date: string
+
+  - name: get_rating_breakdown
+    description: "Return the current overall rating and criteria breakdown for the producer, based on its type."
+    parameters:
+    type: object
+    required: [producerId]
+    properties:
+      producerId:
+        type: number
+        description: "The ID of the producer."
+    endpoint: /api/app/producer/insights/rating-breakdown
+    method: GET
+    response:
+    success: boolean
+    message: string
+    data:
+      type: string   # restaurant | wellness | leisure | null
+      overall: number
+      criteria: object
+      updatedAt: string
+

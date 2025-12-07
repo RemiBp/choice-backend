@@ -17,11 +17,11 @@ export const applyRestaurantFilters = (qb: SelectQueryBuilder<Producer>, filters
             .innerJoin("MenuDishes", "md", "md.menuCategoryId = mc.id");
 
         if (filters.dishName) {
-            qb.andWhere("md.name ILIKE :dishName", { dishName: `%${filters.dishName}%` });
+            qb.andWhere(`"md"."name" ILIKE :dishName`, { dishName: `%${filters.dishName}%` });
         }
 
         if (filters.minDishRating) {
-            qb.andWhere("md.averageRating >= :minDishRating", { minDishRating: filters.minDishRating });
+            qb.andWhere("md.rating ->> 'average' >= :minDishRating", { minDishRating: filters.minDishRating });
         }
     }
 

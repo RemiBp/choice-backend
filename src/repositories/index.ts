@@ -64,6 +64,9 @@ import MenuDishes from '../models/MenuDishes';
 import ProducerDocument from '../models/ProducerDocument';
 import DishRating from '../models/DishRating';
 import LocationPrivacy from '../models/LocationPrivacy';
+import Subscription from '../models/Subscription';
+import { Transaction } from 'typeorm';
+import CopilotUsage from '../models/CopilotUsage';
 
 export const UserRepository = PostgresDataSource.getRepository(User);
 export const RolesRepository = PostgresDataSource.getRepository(Roles);
@@ -116,6 +119,9 @@ export const ReportRepository = PostgresDataSource.getRepository(Report);
 export const InterestRepository = PostgresDataSource.getRepository(Interest);
 export const InterestInviteRepository = PostgresDataSource.getRepository(InterestInvite);
 export const LocationPrivacyRepository = PostgresDataSource.getRepository(LocationPrivacy);
+export const SubscriptionRepository = PostgresDataSource.getRepository(Subscription);
+export const TransactionRepository = PostgresDataSource.getRepository(Transaction);
+export const CopilotUsageRepository = PostgresDataSource.getRepository(CopilotUsage);
 
 export const ChatRepository = PostgresDataSource.getRepository(Chat);
 export const MessageRepository = PostgresDataSource.getRepository(Message);

@@ -28,6 +28,8 @@ import {
     MenuDishesRepository,
     WellnessServiceTypeRepository,
     WellnessServiceRepository,
+    BookingRepository,
+    SlotRepository,
 } from '../../repositories';
 import { CreateDishRatingsInput, CreateEmotionInput, CreateEventRatingsInput, CreatePostInput, CreateProducerPostInput, CreateRatingInput, CreateServiceRatingsInput, EmotionSchema } from '../../validators/producer/post.validation';
 import AppDataSource from '../../data-source';
@@ -39,10 +41,13 @@ import { sendAdminNotification } from '../../utils/sendAdminNotification';
 import { NotificationTypeEnums, PostNotificationCode } from '../../enums/post-notification.enum';
 import { FollowStatusEnums } from '../../enums/followStatus.enum';
 import { LeisureRatingCriteria, RestaurantRatingCriteria, WellnessRatingCriteria } from '../../enums/rating.enum';
-import { EntityManager, ILike, In } from 'typeorm';
+import { Between, EntityManager, ILike, In } from 'typeorm';
 import ServiceRating from '../../models/ServiceRatings';
 import ProducerService from '../../models/Services';
 import WellnessServiceType from '../../models/WellnessServiceTypes';
+import { addDays, addMinutes, endOfDay, endOfWeek, startOfDay, startOfWeek } from 'date-fns';
+import { ProducerType } from '../../enums/ProducerType.enum';
+import { getProducerSlots } from './profile.service';
 
 export const searchProducers = async (query: string, type: string) => {
     if (
