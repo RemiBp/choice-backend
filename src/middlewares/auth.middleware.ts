@@ -24,6 +24,7 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
           return res.status(401).json({ message: 'User is not a producer' });
         }
         req.userId = payload.id;
+        req.roleName = payload.role.name;
         next();
       } else {
         res.sendStatus(401);

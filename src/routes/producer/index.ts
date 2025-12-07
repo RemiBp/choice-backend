@@ -7,6 +7,7 @@ import ProducerPostRouter from './post.route';
 import ProducerMapRouter from './maps.routes';
 import ProducerServiceRouter from './service.router';
 import ScrapperRouter from './scrapper.routes';
+import DashboardRouter from './dashboard.routes';
 
 const ProducerRouter = Router();
 
@@ -21,6 +22,7 @@ ProducerRouter.use('/services', ProducerServiceRouter);
 ProducerRouter.use('/booking', ProducerBookingRouter);
 ProducerRouter.use('/post', ProducerPostRouter);
 ProducerRouter.use('/maps', ProducerMapRouter);
+ProducerRouter.use('/dashboard', DashboardRouter);
 ProducerRouter.use('/scrapper', ScrapperRouter)
 
 export default ProducerRouter;
