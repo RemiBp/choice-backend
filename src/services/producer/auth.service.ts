@@ -13,6 +13,7 @@ import {
   WellnessRepository,
   RestaurantRatingRepository,
   ProducerDocumentRepository,
+  PhotoRepository,
 } from '../../repositories';
 import { sendOTPEmail } from '../mail.service';
 import { generateOTP } from '../../utils/generateOTP';
@@ -37,7 +38,6 @@ import { validateAppleToken } from '../../utils/validateAppleToken';
 import Restaurant from '../../models/Restaurant';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 import PostgresDataSource from '../../data-source';
-import { access } from 'fs';
 import { businessRoles } from '../../utils/businessRoles';
 import { BusinessRole } from '../../enums/Producer.enum';
 import { ProducerStatus } from '../../enums/producerStatus.enum';
@@ -67,50 +67,87 @@ import Producer from '../../models/Producer';
 // };
 
 export const createProducer = async (input: CreateProducer) => {
-  const existing = await ProducerRepository.findOne({
-    where: { placeId: input.placeId },
-  });
+  const placeId = input.placeId || `scraper_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-  if (existing) {
-    throw new BadRequestError("Producer with this Place ID already exists");
+  if (input.placeId) {
+    const existing = await ProducerRepository.findOne({
+      where: { placeId: input.placeId },
+      relations: ['photos'],
+    });
+    if (existing) {
+      // Add photos if this producer has none yet
+      if ((!existing.photos || existing.photos.length === 0) && input.photos && input.photos.length > 0) {
+        const photoEntities = input.photos.map(url =>
+          PhotoRepository.create({ url, source: 'scraper', producer: existing })
+        );
+        await PhotoRepository.save(photoEntities);
+      }
+      return existing;
+    }
   }
 
   // Step 1: Create Producer
   const producer = ProducerRepository.create({
-    ...input,
+    name: input.name,
+    address: input.address || '',
+    city: input.city,
+    country: input.country,
+    phoneNumber: input.phoneNumber,
+    website: input.website,
+    placeId,
+    mapsUrl: input.mapsUrl,
+    latitude: input.latitude ?? undefined,
+    longitude: input.longitude ?? undefined,
+    rating: input.rating ? { average: input.rating, count: 0 } : undefined,
+    type: input.type,
+    companyEmail: input.companyEmail,
+    document1: input.document1,
+    document2: input.document2,
+    details: input.description,
     status: ProducerStatus.PENDING,
     isActive: true,
     isDeleted: false,
     user: null,
-  });
+  } as any);
 
   const savedProducer = await ProducerRepository.save(producer);
 
-  // Step 2: Create linked rating row based on type
+  // Save photos
+  if (input.photos && input.photos.length > 0) {
+    const photoEntities = input.photos.map(url =>
+      PhotoRepository.create({ url, source: 'scraper', producer: savedProducer })
+    );
+    await PhotoRepository.save(photoEntities);
+  }
+
+  // Step 2: Create linked rating row based on type (skip if already exists)
   let linkedRecord: any = null;
 
   switch (savedProducer.type) {
-    case BusinessRole.RESTAURANT:
-      linkedRecord = RestaurantRatingRepository.create({
-        producerId: savedProducer.id,
-      });
-      await RestaurantRatingRepository.save(linkedRecord);
+    case BusinessRole.RESTAURANT: {
+      const exists = await RestaurantRatingRepository.findOneBy({ producerId: savedProducer.id });
+      if (!exists) {
+        linkedRecord = RestaurantRatingRepository.create({ producerId: savedProducer.id });
+        await RestaurantRatingRepository.save(linkedRecord);
+      }
       break;
-
-    case BusinessRole.LEISURE:
-      linkedRecord = LeisureRepository.create({
-        producerId: savedProducer.id,
-      });
-      await LeisureRepository.save(linkedRecord);
+    }
+    case BusinessRole.LEISURE: {
+      const exists = await LeisureRepository.findOneBy({ producerId: savedProducer.id });
+      if (!exists) {
+        linkedRecord = LeisureRepository.create({ producerId: savedProducer.id });
+        await LeisureRepository.save(linkedRecord);
+      }
       break;
-
-    case BusinessRole.WELLNESS:
-      linkedRecord = WellnessRepository.create({
-        producerId: savedProducer.id,
-      });
-      await WellnessRepository.save(linkedRecord);
+    }
+    case BusinessRole.WELLNESS: {
+      const exists = await WellnessRepository.findOneBy({ producerId: savedProducer.id });
+      if (!exists) {
+        linkedRecord = WellnessRepository.create({ producerId: savedProducer.id });
+        await WellnessRepository.save(linkedRecord);
+      }
       break;
-
+    }
     default:
       throw new BadRequestError("Unsupported producer type");
   }

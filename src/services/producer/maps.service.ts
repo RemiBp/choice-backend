@@ -7,11 +7,13 @@ import { ProducerType, SortOption } from '../../enums/ProducerType.enum';
 import { NotFoundError } from '../../errors/notFound.error';
 import Post from '../../models/Post';
 import User from '../../models/User';
-import { FollowRepository, NotificationRepository, PostRepository, ProducerOfferRepository, ProducerRepository, UserRepository } from '../../repositories';
+import Photo from '../../models/Photos';
+import { FollowRepository, NotificationRepository, PhotoRepository, PostRepository, ProducerOfferRepository, ProducerRepository, UserRepository } from '../../repositories';
 import { applyLeisureFilters, applyRestaurantFilters, applyWellnessFilters } from '../../utils/mapFilters';
 import { sendNotification } from '../../utils/notificationHelper';
 import { sendAdminNotification } from '../../utils/sendAdminNotification';
-import { ChoiceMapInput, createOfferInput, GetFilteredRestaurantsInput, GetProducerHeatmapInput, NearbyProducersInput, SendOfferNotificationInput } from '../../validators/producer/maps.validation';
+import { ChoiceMapInput, createOfferInput, GetFilteredRestaurantsInput, GetProducerHeatmapInput, NearbyProducersInput, SearchProducersInput, SendOfferNotificationInput } from '../../validators/producer/maps.validation';
+import { ILike } from 'typeorm';
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -41,8 +43,20 @@ export const getNearbyProducers = async (userId: number, data: NearbyProducersIn
             "p.latitude AS latitude",
             "p.longitude AS longitude",
             "p.address AS address",
+            "p.rating AS rating",
+            "p.mapsUrl AS mapsUrl",
+            "p.phoneNumber AS phoneNumber",
+            "p.website AS website",
+            "p.details AS description",
         ])
         .addSelect(`${distExpr}`, "distance_km")
+        .addSelect((subQb: any) =>
+            subQb.select("ph.url").from(Photo, "ph")
+                .where("ph.producerId = p.id")
+                .orderBy("ph.id", "ASC")
+                .limit(1),
+            "profileImage"
+        )
         .andWhere("p.isActive = true")
         .andWhere("p.latitude IS NOT NULL AND p.longitude IS NOT NULL")
         .andWhere(`${distExpr} <= :radius`, { radius })
@@ -230,7 +244,7 @@ export const getUserLiveOffers = async (userId: number) => {
 
     // Fetch those offers (that are not expired)
     const offers = await ProducerOfferRepository.createQueryBuilder("offer")
-        .innerJoinAndSelect("offer.producer")
+        .innerJoinAndSelect("offer.producer", "producer")
         .where("offer.id IN (:...offerIds)", { offerIds })
         // .andWhere("offer.expiresAt > NOW()")
         .andWhere("offer.status IN (:...statuses)", { statuses: ["SENT", "ACTIVE"] })
@@ -250,9 +264,11 @@ export const getProducerDetails = async (id: number) => {
 
     const postsCount = await PostRepository.count({ where: { producerId: id } });
     const followersCount = await FollowRepository.count({ where: { producerId: id } });
-    const followingCount = await FollowRepository.count({
-        where: { followerId: producer.user.id, status: FollowStatusEnums.Approved },
-    });
+    const followingCount = producer.user
+        ? await FollowRepository.count({
+              where: { followerId: producer.user.id, status: FollowStatusEnums.Approved },
+          })
+        : 0;
 
     const recentPosts = await PostRepository.find({
         where: { producerId: id },
@@ -327,7 +343,7 @@ export const sendOfferNotification = async (data: SendOfferNotificationInput) =>
             type: NotificationTypeEnums.OFFER,
             purpose: NotificationTypeEnums.OFFER,
             restaurantName: producer.name,
-            profilePicture: producer.logoUrl || "",
+            profilePicture: (producer as any).logoUrl || "",
             fcmToken: user.deviceId!,
             extraPayload: {
                 offerId: String(offer.id),
@@ -343,6 +359,37 @@ export const sendOfferNotification = async (data: SendOfferNotificationInput) =>
     await ProducerOfferRepository.save(offer);
 
     return offer;
+};
+
+export const searchProducers = async (input: SearchProducersInput) => {
+    const { query, type, page, limit } = input;
+
+    const where: any = {
+        isDeleted: false,
+        isActive: true,
+        name: ILike(`%${query}%`),
+    };
+
+    if (type && type !== ProducerType.ALL && type !== ProducerType.FRIENDS) {
+        where.type = type;
+    }
+
+    const [producers, total] = await ProducerRepository.findAndCount({
+        where,
+        select: ["id", "name", "address", "type", "latitude", "longitude", "rating", "placeId", "website", "phoneNumber"],
+        relations: ["photos"],
+        skip: (page - 1) * limit,
+        take: limit,
+        order: { name: "ASC" },
+    });
+
+    return {
+        producers,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+    };
 };
 
 export * as MapsService from './maps.service';

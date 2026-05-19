@@ -4,9 +4,12 @@ export class InitailSetup1753361450298 implements MigrationInterface {
     name = 'InitailSetup1753361450298'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "OperationalHour" DROP CONSTRAINT "FK_6666a9ed428d81b71cf108fd33e"`);
-        await queryRunner.query(`ALTER TABLE "Slot" DROP CONSTRAINT "FK_2260da6950bf8ff06e813ca0dd3"`);
-        await queryRunner.query(`ALTER TABLE "OperationalHour" RENAME COLUMN "producerId" TO "userId"`);
+        const c1 = await queryRunner.query(`SELECT 1 FROM pg_constraint WHERE conname='FK_6666a9ed428d81b71cf108fd33e'`);
+        if (c1.length > 0) await queryRunner.query(`ALTER TABLE "OperationalHour" DROP CONSTRAINT "FK_6666a9ed428d81b71cf108fd33e"`);
+        const c2 = await queryRunner.query(`SELECT 1 FROM pg_constraint WHERE conname='FK_2260da6950bf8ff06e813ca0dd3'`);
+        if (c2.length > 0) await queryRunner.query(`ALTER TABLE "Slot" DROP CONSTRAINT "FK_2260da6950bf8ff06e813ca0dd3"`);
+        const renameCol = await queryRunner.query(`SELECT 1 FROM information_schema.columns WHERE table_name='OperationalHour' AND column_name='producerId'`);
+        if (renameCol.length > 0) await queryRunner.query(`ALTER TABLE "OperationalHour" RENAME COLUMN "producerId" TO "userId"`);
         await queryRunner.query(`CREATE TYPE "public"."Posts_type_enum" AS ENUM('wellness', 'leisure', 'restaurant', 'event', 'simple')`);
         await queryRunner.query(`CREATE TYPE "public"."Posts_status_enum" AS ENUM('public', 'private', 'friends_only', 'draft', 'restricted')`);
         await queryRunner.query(`CREATE TABLE "Posts" ("id" SERIAL NOT NULL, "type" "public"."Posts_type_enum" NOT NULL, "status" "public"."Posts_status_enum" NOT NULL DEFAULT 'draft', "publishDate" TIMESTAMP WITH TIME ZONE, "description" text NOT NULL, "coverImage" character varying, "link" character varying, "tags" text array NOT NULL DEFAULT '{}', "likesCount" integer NOT NULL DEFAULT '0', "shareCount" integer NOT NULL DEFAULT '0', "commentCount" integer NOT NULL DEFAULT '0', "overallAvgRating" numeric(3,2), "userId" integer, "producerId" integer, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deletedAt" TIMESTAMP WITH TIME ZONE, "isDeleted" boolean NOT NULL DEFAULT false, CONSTRAINT "PK_0f050d6d1112b2d07545b43f945" PRIMARY KEY ("id"))`);
@@ -34,29 +37,40 @@ export class InitailSetup1753361450298 implements MigrationInterface {
         await queryRunner.query(`CREATE TABLE "PostStatistics" ("id" SERIAL NOT NULL, "postId" integer NOT NULL, "totalLikes" integer NOT NULL DEFAULT '0', "totalShares" integer NOT NULL DEFAULT '0', "totalComments" integer NOT NULL DEFAULT '0', "totalRatings" integer NOT NULL DEFAULT '0', "averageRating" numeric(3,2), "criteriaRatings" jsonb, "emotionCounts" jsonb, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_a42a8cc0af3ed7441fa6a27695e" UNIQUE ("postId"), CONSTRAINT "REL_a42a8cc0af3ed7441fa6a27695" UNIQUE ("postId"), CONSTRAINT "PK_45f1f9305dfa4b99c744a6358f9" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "PostImages" ("id" SERIAL NOT NULL, "postId" integer NOT NULL, "url" character varying NOT NULL, "isCoverImage" boolean NOT NULL DEFAULT false, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deletedAt" TIMESTAMP WITH TIME ZONE, "isDeleted" boolean NOT NULL DEFAULT false, CONSTRAINT "PK_df4d5c03340957932d47e24181c" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "IDX_a5895e904fa7628e8d67d18b91" ON "PostImages" ("isDeleted") `);
-        await queryRunner.query(`ALTER TABLE "Producers" DROP COLUMN "slotDuration"`);
-        await queryRunner.query(`ALTER TABLE "Slot" DROP COLUMN "producerId"`);
-        await queryRunner.query(`ALTER TABLE "EventBookings" DROP COLUMN "totalPrice"`);
-        await queryRunner.query(`ALTER TABLE "OpeningHours" ADD "producerId" integer`);
-        await queryRunner.query(`ALTER TABLE "OpeningHours" ADD CONSTRAINT "UQ_ce65ca2b119b97df3650773d571" UNIQUE ("producerId")`);
-        await queryRunner.query(`ALTER TABLE "OperationalHour" ADD CONSTRAINT "FK_896282abbca19854762c4de384a" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "OpeningHours" ADD CONSTRAINT "FK_ce65ca2b119b97df3650773d571" FOREIGN KEY ("producerId") REFERENCES "Producers"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "Posts" ADD CONSTRAINT "FK_a8237eded7a9a311081b65ed0b8" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "Posts" ADD CONSTRAINT "FK_88811d025c8b8574fa26fbfdf2f" FOREIGN KEY ("producerId") REFERENCES "Producers"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostLikes" ADD CONSTRAINT "FK_a931f62e10da42b6a74f7a4fe79" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostLikes" ADD CONSTRAINT "FK_acad3c28cf8d94318cf07d2c891" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostComments" ADD CONSTRAINT "FK_33fa6d1609cacfb6b25d580144b" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostComments" ADD CONSTRAINT "FK_1447229657793c6cd181e3f32aa" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostShares" ADD CONSTRAINT "FK_5f103aa4019e86ed3301843828f" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostShares" ADD CONSTRAINT "FK_d7580b2e9589c425b64cc7266f8" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostTags" ADD CONSTRAINT "FK_d4d36ff9d468f0feb0f4965ac76" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostTags" ADD CONSTRAINT "FK_fdea93b412bb75adf5987de3d9e" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostEmotions" ADD CONSTRAINT "FK_84c7f09be7f45867e255886f862" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostEmotions" ADD CONSTRAINT "FK_55cccdcf6a4592e196b0a04e14a" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostRatings" ADD CONSTRAINT "FK_8105a418c30e139b1f09f9ba56f" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostRatings" ADD CONSTRAINT "FK_add280f6de71689396aaaf8a3be" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostStatistics" ADD CONSTRAINT "FK_a42a8cc0af3ed7441fa6a27695e" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "PostImages" ADD CONSTRAINT "FK_fff212cb129560f0a2cdf1582b3" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        const slotDurCol = await queryRunner.query(`SELECT 1 FROM information_schema.columns WHERE table_name='Producers' AND column_name='slotDuration'`);
+        if (slotDurCol.length > 0) await queryRunner.query(`ALTER TABLE "Producers" DROP COLUMN "slotDuration"`);
+        const slotProdCol = await queryRunner.query(`SELECT 1 FROM information_schema.columns WHERE table_name='Slot' AND column_name='producerId'`);
+        if (slotProdCol.length > 0) await queryRunner.query(`ALTER TABLE "Slot" DROP COLUMN "producerId"`);
+        const tpCol = await queryRunner.query(`SELECT 1 FROM information_schema.columns WHERE table_name='EventBookings' AND column_name='totalPrice'`);
+        if (tpCol.length > 0) await queryRunner.query(`ALTER TABLE "EventBookings" DROP COLUMN "totalPrice"`);
+        const ohProdCol = await queryRunner.query(`SELECT 1 FROM information_schema.columns WHERE table_name='OpeningHours' AND column_name='producerId'`);
+        if (ohProdCol.length === 0) await queryRunner.query(`ALTER TABLE "OpeningHours" ADD "producerId" integer`);
+        const ohUq = await queryRunner.query(`SELECT 1 FROM pg_constraint WHERE conname='UQ_ce65ca2b119b97df3650773d571'`);
+        if (ohUq.length === 0) await queryRunner.query(`ALTER TABLE "OpeningHours" ADD CONSTRAINT "UQ_ce65ca2b119b97df3650773d571" UNIQUE ("producerId")`);
+        const fkConstraints: Array<{name: string, sql: string}> = [
+            { name: 'FK_896282abbca19854762c4de384a', sql: `ALTER TABLE "OperationalHour" ADD CONSTRAINT "FK_896282abbca19854762c4de384a" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_ce65ca2b119b97df3650773d571', sql: `ALTER TABLE "OpeningHours" ADD CONSTRAINT "FK_ce65ca2b119b97df3650773d571" FOREIGN KEY ("producerId") REFERENCES "Producers"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_a8237eded7a9a311081b65ed0b8', sql: `ALTER TABLE "Posts" ADD CONSTRAINT "FK_a8237eded7a9a311081b65ed0b8" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_88811d025c8b8574fa26fbfdf2f', sql: `ALTER TABLE "Posts" ADD CONSTRAINT "FK_88811d025c8b8574fa26fbfdf2f" FOREIGN KEY ("producerId") REFERENCES "Producers"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_a931f62e10da42b6a74f7a4fe79', sql: `ALTER TABLE "PostLikes" ADD CONSTRAINT "FK_a931f62e10da42b6a74f7a4fe79" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_acad3c28cf8d94318cf07d2c891', sql: `ALTER TABLE "PostLikes" ADD CONSTRAINT "FK_acad3c28cf8d94318cf07d2c891" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_33fa6d1609cacfb6b25d580144b', sql: `ALTER TABLE "PostComments" ADD CONSTRAINT "FK_33fa6d1609cacfb6b25d580144b" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_1447229657793c6cd181e3f32aa', sql: `ALTER TABLE "PostComments" ADD CONSTRAINT "FK_1447229657793c6cd181e3f32aa" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_5f103aa4019e86ed3301843828f', sql: `ALTER TABLE "PostShares" ADD CONSTRAINT "FK_5f103aa4019e86ed3301843828f" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_d7580b2e9589c425b64cc7266f8', sql: `ALTER TABLE "PostShares" ADD CONSTRAINT "FK_d7580b2e9589c425b64cc7266f8" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_d4d36ff9d468f0feb0f4965ac76', sql: `ALTER TABLE "PostTags" ADD CONSTRAINT "FK_d4d36ff9d468f0feb0f4965ac76" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_fdea93b412bb75adf5987de3d9e', sql: `ALTER TABLE "PostTags" ADD CONSTRAINT "FK_fdea93b412bb75adf5987de3d9e" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_84c7f09be7f45867e255886f862', sql: `ALTER TABLE "PostEmotions" ADD CONSTRAINT "FK_84c7f09be7f45867e255886f862" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_55cccdcf6a4592e196b0a04e14a', sql: `ALTER TABLE "PostEmotions" ADD CONSTRAINT "FK_55cccdcf6a4592e196b0a04e14a" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_8105a418c30e139b1f09f9ba56f', sql: `ALTER TABLE "PostRatings" ADD CONSTRAINT "FK_8105a418c30e139b1f09f9ba56f" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_add280f6de71689396aaaf8a3be', sql: `ALTER TABLE "PostRatings" ADD CONSTRAINT "FK_add280f6de71689396aaaf8a3be" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_a42a8cc0af3ed7441fa6a27695e', sql: `ALTER TABLE "PostStatistics" ADD CONSTRAINT "FK_a42a8cc0af3ed7441fa6a27695e" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+            { name: 'FK_fff212cb129560f0a2cdf1582b3', sql: `ALTER TABLE "PostImages" ADD CONSTRAINT "FK_fff212cb129560f0a2cdf1582b3" FOREIGN KEY ("postId") REFERENCES "Posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION` },
+        ];
+        for (const fk of fkConstraints) {
+            const exists = await queryRunner.query(`SELECT 1 FROM pg_constraint WHERE conname='${fk.name}'`);
+            if (exists.length === 0) await queryRunner.query(fk.sql);
+        }
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {

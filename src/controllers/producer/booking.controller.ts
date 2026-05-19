@@ -74,17 +74,11 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction) =
 // Old APIs
 export const getBookings = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const Booking = String(req.query.booking) || 'scheduled';
+    const Booking = (req.query.booking as string) || 'upcoming';
     const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
+    const limit = Number(req.query.limit) || 20;
     const userId = Number(req.userId);
-    if (!Booking) {
-      throw new Error('Booking is required');
-    }
-    const timeZone = String(req.query.timeZone);
-    if (!timeZone) {
-      throw new Error('timeZone is required');
-    }
+    const timeZone = (req.query.timeZone as string) || 'UTC';
     const response = await BookingService.getBookings(userId, Booking, timeZone, page, limit);
     res.status(200).json(response);
   } catch (error) {

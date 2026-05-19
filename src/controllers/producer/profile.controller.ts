@@ -17,7 +17,6 @@ import {
   uploadRestaurantImagesSchema,
 } from '../../validators/producer/profile.validation';
 import { ProfileService } from '../../services/producer/profile.service';
-import { time } from 'console';
 
 export const getAllServiceType = async (req: Request, res: Response, next: NextFunction) => {
   try {

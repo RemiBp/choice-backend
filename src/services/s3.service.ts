@@ -65,7 +65,6 @@ async function getPresignedUploadUrlForAudio(
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: `${purpose}/${keyName}`,
-      ACL: ACL ? 'public-read' : 'private',
       ContentType: contentType,
     });
 
@@ -98,7 +97,6 @@ async function getPresignedUploadUrlForAttachments(
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: `${purpose}/${keyName}`,
-      ACL: ACL ? 'public-read' : 'private',
       ContentType: contentType,
     });
 
@@ -186,7 +184,6 @@ async function duplicateObject(key: string): Promise<string> {
     const command = new CopyObjectCommand({
       Bucket: bucketName,
       CopySource: `${bucketName}/${key}`,
-      ACL: 'private',
       Key: newKey,
     });
 
@@ -219,7 +216,6 @@ async function getPresignedUploadUrl(
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: `${purpose}/${keyName}`,
-      ACL: ACL ? 'public-read' : 'private',
       ContentType: contentType,
     });
 

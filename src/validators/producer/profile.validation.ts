@@ -1,6 +1,4 @@
-import { profile } from 'console';
 import { z } from 'zod';
-import { deleteRestaurantImage } from '../../services/producer/profile.service';
 import { ServiceType } from '../../enums/serviceType.enum';
 
 export const uploadDocumentsSchema = z.object({

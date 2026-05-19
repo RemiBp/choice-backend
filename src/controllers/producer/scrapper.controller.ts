@@ -5,8 +5,9 @@ import { NotFoundError } from "../../errors/notFound.error";
 import { z } from "zod";
 import { BadRequestError } from "../../errors/badRequest.error";
 import { ScrapperService } from "../../services/producer/scrapper.service";
-import { presignedURLSchema } from "../../validators/producer/profile.validation";
+import { presignedURLSchema, setOperationHoursSchema } from "../../validators/producer/profile.validation";
 import { EventRatingSchema, LeisureAIRatingSchema, MenuRatingSchema, RestaurantAIRatingSchema, ServiceRatingSchema, SetGalleryImagesSchema, WellnessAIRatingSchema, setServiceTypeSchema } from "../../validators/producer/scrapper.validation";
+import { ProfileService } from "../../services/producer/profile.service";
 
 
 export const saveRestaurantAIRating = async (req: Request, res: Response, next: NextFunction) => {
@@ -163,5 +164,26 @@ export const saveEventRating = async (req: Request, res: Response, next: NextFun
     }
 };
 
+
+/**
+ * Scrapper-specific setOperationalHours: reads producerId from body (no JWT needed).
+ */
+export const setOperationalHours = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { producerId, hours } = req.body;
+        if (!producerId) throw new BadRequestError("producerId is required");
+        if (!hours) throw new BadRequestError("hours is required");
+
+        const validatedObject = setOperationHoursSchema.parse({
+            restaurantId: Number(producerId),
+            hours,
+        });
+
+        const response = await ProfileService.setOperationalHours(validatedObject);
+        return res.status(200).json(response);
+    } catch (error) {
+        next(error);
+    }
+};
 
 export * as ScrapperController from './scrapper.controller';

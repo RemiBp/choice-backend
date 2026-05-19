@@ -7,6 +7,9 @@ UserMapRouter.get('/', (req, res) => {
     res.send('Hit Create Map route');
 });
 
+// Public search endpoint (no auth required)
+UserMapRouter.get('/search', MapsController.searchProducers);
+
 UserMapRouter.use(authenticateBothJWT);
 UserMapRouter.use(checkStatus);
 

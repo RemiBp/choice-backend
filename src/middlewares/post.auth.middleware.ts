@@ -9,10 +9,8 @@ import { UserRepository } from '../repositories';
 
 interface UserPayload extends JwtPayload {
     id: number;
-    role: {
-        id: number;
-        name: string;
-    };
+    role: { id?: number; name: string } | string;
+    status?: boolean;
 }
 
 export const authenticateJWTForBooking = (req: Request, res: Response, next: NextFunction) => {
@@ -36,12 +34,16 @@ export const authenticateJWTForBooking = (req: Request, res: Response, next: Nex
 
             const payload = decoded as UserPayload;
 
-            if (!payload.id || !payload.role?.name) {
+            const roleName = typeof payload.role === 'string'
+                ? payload.role
+                : (payload.role as { name: string })?.name;
+
+            if (!payload.id || !roleName) {
                 return res.status(400).json({ message: 'Token payload is missing required fields' });
             }
 
             req.userId = payload.id;
-            req.roleName = payload.role.name;
+            req.roleName = roleName;
 
             next();
         });

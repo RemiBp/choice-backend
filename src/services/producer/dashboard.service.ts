@@ -1,7 +1,8 @@
 // services/producer/dashboard.service.ts
 import { Between } from "typeorm";
-import { ProducerRepository, PostRepository, BookingRepository, PostRatingRepository, FollowRepository } from "../../repositories";
+import { ProducerRepository, PostRepository, BookingRepository, PostRatingRepository, FollowRepository, RestaurantRatingRepository, LeisureRepository, WellnessRepository } from "../../repositories";
 import { NotFoundError } from "../../errors/notFound.error";
+import { BusinessRole } from "../../enums/Producer.enum";
 
 export const getOverview = async ({ userId, roleName }: { userId: number; roleName: string }) => {
     const producer = await ProducerRepository.findOneBy({ userId });
@@ -154,16 +155,31 @@ export const getBenchmark = async ({ userId }: { userId: number }) => {
     const producer = await ProducerRepository.findOneBy({ userId });
     if (!producer) throw new NotFoundError("Producer not found.");
 
-    const avgRatings = await PostRatingRepository
-        .createQueryBuilder("r")
-        .select("r.producerType", "type")
-        .addSelect("AVG(r.overall)", "avg")
-        .groupBy("r.producerType")
-        .getRawMany();
+    // Build benchmark from the type-specific rating tables
+    const benchmark: { type: string; avg: string }[] = [];
+
+    const [restaurantAvg, leisureAvg, wellnessAvg] = await Promise.all([
+        RestaurantRatingRepository
+            .createQueryBuilder("r")
+            .select("AVG(r.ai_overall)", "avg")
+            .getRawOne(),
+        LeisureRepository
+            .createQueryBuilder("r")
+            .select("AVG(r.ai_overall)", "avg")
+            .getRawOne(),
+        WellnessRepository
+            .createQueryBuilder("r")
+            .select("AVG(r.ai_overall)", "avg")
+            .getRawOne(),
+    ]);
+
+    benchmark.push({ type: BusinessRole.RESTAURANT, avg: Number(restaurantAvg?.avg ?? 0).toFixed(2) });
+    benchmark.push({ type: BusinessRole.LEISURE, avg: Number(leisureAvg?.avg ?? 0).toFixed(2) });
+    benchmark.push({ type: BusinessRole.WELLNESS, avg: Number(wellnessAvg?.avg ?? 0).toFixed(2) });
 
     return {
         myType: producer.type,
-        benchmark: avgRatings,
+        benchmark,
     };
 }
 

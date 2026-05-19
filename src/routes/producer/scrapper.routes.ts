@@ -8,7 +8,7 @@ ScrapperRouter.get('/', (req, res) => {
     res.send('Hit scrapping route');
 });
 
-// For scrapping
+// For scrapping (no auth required — called by internal pipeline)
 ScrapperRouter.post('/createProducer', AuthController.createProducer);
 ScrapperRouter.get('/getProducers', ProfileController.getProducers);
 ScrapperRouter.get('/getProducerbyId/:id', ProfileController.getProducerbyId);
@@ -26,7 +26,8 @@ ScrapperRouter.post('/eventratings', ScrapperController.saveEventRating);
 // Other scrapper endpoints
 ScrapperRouter.post('/getPreSignedUrl', ScrapperController.getPreSignedUrl);
 ScrapperRouter.post('/setGalleryImages', ScrapperController.setGalleryImages);
-ScrapperRouter.post('/setOperationalHours', ProfileController.setOperationalHours);
+// Uses ScrapperController version that reads producerId from body (not from JWT)
+ScrapperRouter.post('/setOperationalHours', ScrapperController.setOperationalHours);
 ScrapperRouter.post('/setServiceType', ScrapperController.setServiceType);
 ScrapperRouter.get('/getAllServiceTypes', ScrapperController.getAllServiceTypes);
 

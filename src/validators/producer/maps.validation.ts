@@ -113,3 +113,12 @@ export const SendOfferNotificationSchema = z.object({
 });
 
 export type SendOfferNotificationInput = z.infer<typeof SendOfferNotificationSchema>;
+
+export const SearchProducersSchema = z.object({
+    query: z.string().min(1, "Search query is required"),
+    type: z.nativeEnum(ProducerType).optional(),
+    page: z.coerce.number().default(1),
+    limit: z.coerce.number().default(20),
+});
+
+export type SearchProducersInput = z.infer<typeof SearchProducersSchema>;

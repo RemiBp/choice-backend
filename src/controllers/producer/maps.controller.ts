@@ -1,6 +1,6 @@
 import { MapsService } from '../../services/producer/maps.service';
 import { sendApiResponse } from '../../utils/sendApiResponse';
-import { ChoiceMapSchema, createOfferSchema, getFilteredRestaurantsSchema, GetProducerHeatmapSchema, GetProducerOffersSchema, NearbyProducersSchema, SendOfferNotificationSchema } from '../../validators/producer/maps.validation';
+import { ChoiceMapSchema, createOfferSchema, getFilteredRestaurantsSchema, GetProducerHeatmapSchema, GetProducerOffersSchema, NearbyProducersSchema, SearchProducersSchema, SendOfferNotificationSchema } from '../../validators/producer/maps.validation';
 import { Request, Response, NextFunction } from 'express';
 
 export const getNearbyProducers = async (req: Request, res: Response, next: NextFunction) => {
@@ -102,6 +102,16 @@ export const sendOfferNotification = async (req: Request, res: Response, next: N
         sendApiResponse(res, 200, "Offer notification sent successfully", response);
     } catch (error) {
         next(error);
+    }
+};
+
+export const searchProducers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const input = SearchProducersSchema.parse(req.query);
+        const data = await MapsService.searchProducers(input);
+        return sendApiResponse(res, 200, "Producers search results", data);
+    } catch (err) {
+        next(err);
     }
 };
 
