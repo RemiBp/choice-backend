@@ -46,11 +46,12 @@ export const register = async (signUpInput: UserSignUp) => {
         if (allOtps.length > 0) {
           await SignUpOTPRepository.remove(allOtps);
         }
-        const otp = '000000';
+        const otp = generateOTP(6);
         await SignUpOTPRepository.save({
           user: existingUser,
           otp,
         });
+        await sendOTPEmail(email, otp, 'SignUp');
         return {
           isVerified: false,
           message: 'OTP sent Successfully',
@@ -83,11 +84,12 @@ export const register = async (signUpInput: UserSignUp) => {
       password: hashedPassword,
     });
 
-    const otp = '000000';
+    const otp = generateOTP(6);
     await SignUpOTPRepository.save({
       user: saveNewUser,
       otp,
     });
+    await sendOTPEmail(email, otp, 'SignUp');
 
     return {
       message: 'OTP sent Successfully',
@@ -124,7 +126,7 @@ export const login = async (loginObject: UserLoginSchema) => {
       throw new BadRequestError('Invalid password');
     }
     if (user.isVerified === false) {
-      const otp = '000000';
+      const otp = generateOTP(6);
       const getSignUpOTPs = await SignUpOTPRepository.find({
         where: {
           user: {
@@ -137,7 +139,8 @@ export const login = async (loginObject: UserLoginSchema) => {
         otp,
         user,
       });
-      const saveOtp = await SignUpOTPRepository.save(signUpOtp);
+      await SignUpOTPRepository.save(signUpOtp);
+      await sendOTPEmail(user.email, otp, 'SignUp');
       return {
         isVerified: false,
         message: 'OTP sent successfully',
@@ -280,13 +283,12 @@ export const resendSignUpOtp = async (validationObject: UserForgotPassword) => {
     });
     const removeOtps = await SignUpOTPRepository.remove(allOtps);
 
-    //const otp = generateOTP(6)
-    const otp = '000000';
+    const otp = generateOTP(6);
     await SignUpOTPRepository.save({
       otp,
       user,
     });
-    //const sendMail = await sendOTPEmail(email, otp, "Login")
+    await sendOTPEmail(email, otp, 'SignUp');
 
     return {
       message: 'OTP generated and sent successfully',
@@ -327,14 +329,13 @@ export const forgotPassword = async (validationObject: UserForgotPassword) => {
     if (user.role.id != userRole.id) {
       throw new BadRequestError('user is not an App user');
     }
-    //const otp = generateOTP(6)
-    const otp = '000000';
+    const otp = generateOTP(6);
     await PasswordResetOTPRepository.save({
       otp,
       user,
       expiry: addMinutes(new Date(), 10),
     });
-    //const sendMail = await sendOTPEmail(email, otp, "forgotPassword")
+    await sendOTPEmail(email, otp, 'ForgotPassword');
     return {
       message: 'OTP generated and sent successfully',
     };
@@ -383,14 +384,13 @@ export const resendForgotPasswordOtp = async (validationObject: UserForgotPasswo
     });
     const removeOtps = await PasswordResetOTPRepository.remove(allOtps);
 
-    //const otp = generateOTP(6)
-    const otp = '000000';
+    const otp = generateOTP(6);
     await PasswordResetOTPRepository.save({
       otp,
       user,
       expiry: addMinutes(new Date(), 10),
     });
-    //const sendMail = await sendOTPEmail(email, otp, "forgotPassword")
+    await sendOTPEmail(email, otp, 'ForgotPassword');
 
     return {
       message: 'OTP generated and sent successfully',

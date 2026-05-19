@@ -221,8 +221,9 @@ export const register = async (signUpInput: SignUp) => {
 
       await queryRunner.commitTransaction();
 
-      const otp = "000000";
+      const otp = generateOTP(6);
       await SignUpOTPRepository.save({ user: savedUser, otp });
+      await sendOTPEmail(lowerEmail, otp, 'SignUp');
 
       return {
         message: "Business claimed successfully. OTP sent for verification.",
@@ -243,8 +244,9 @@ export const register = async (signUpInput: SignUp) => {
       });
       if (allOtps.length > 0) await SignUpOTPRepository.remove(allOtps);
 
-      const otp = "000000";
+      const otp = generateOTP(6);
       await SignUpOTPRepository.save({ user: existingUser, otp });
+      await sendOTPEmail(lowerEmail, otp, 'SignUp');
 
       return { isVerified: false, message: "OTP sent successfully" };
     }
@@ -320,8 +322,9 @@ export const register = async (signUpInput: SignUp) => {
 
     await queryRunner.commitTransaction();
 
-    const otp = "000000";
+    const otp = generateOTP(6);
     await SignUpOTPRepository.save({ user: savedUser, otp });
+    await sendOTPEmail(lowerEmail, otp, 'SignUp');
 
     return { message: "OTP sent successfully" };
   } catch (error: any) {
@@ -361,8 +364,9 @@ export const login = async (loginObject: LoginSchema) => {
         await SignUpOTPRepository.remove(existingOtps);
       }
 
-      const otp = '000000';
+      const otp = generateOTP(6);
       await SignUpOTPRepository.save({ user, otp });
+      await sendOTPEmail(user.email, otp, 'SignUp');
 
       // Strip sensitive fields
       const { Password, businessProfile, ...safeUser } = user;
@@ -643,11 +647,12 @@ export const resendSignUpOtp = async (validationObject: ForgotPassword) => {
       await SignUpOTPRepository.remove(allOtps);
     }
 
-    const otp = '000000';
+    const otp = generateOTP(6);
     await SignUpOTPRepository.save({
       otp,
       user,
     });
+    await sendOTPEmail(email, otp, 'SignUp');
 
     return {
       message: 'OTP generated and sent successfully',
@@ -682,12 +687,13 @@ export const forgotPassword = async (validationObject: ForgotPassword) => {
       await PasswordResetOTPRepository.remove(existingOtps);
     }
 
-    const otp = '000000';
+    const otp = generateOTP(6);
     await PasswordResetOTPRepository.save({
       otp,
       user,
       expiry: addMinutes(new Date(), 10),
     });
+    await sendOTPEmail(email, otp, 'ForgotPassword');
 
     return {
       message: 'OTP generated and sent successfully',
@@ -722,12 +728,13 @@ export const resendForgotPasswordOtp = async (validationObject: ForgotPassword) 
       await PasswordResetOTPRepository.remove(existingOtps);
     }
 
-    const otp = '000000';
+    const otp = generateOTP(6);
     await PasswordResetOTPRepository.save({
       otp,
       user,
       expiry: addMinutes(new Date(), 10),
     });
+    await sendOTPEmail(email, otp, 'ForgotPassword');
 
     return {
       message: 'OTP generated and sent successfully',
