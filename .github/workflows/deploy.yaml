@@ -12,21 +12,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Railway CLI (Rust binary)
+      - name: Install Railway CLI
+        shell: bash
         run: |
-          curl -fsSL https://railway.com/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+          curl -fsSL https://railway.com/install.sh | bash
+          echo "$HOME/.railway/bin" >> "$GITHUB_PATH"
 
-      - name: Link Railway project
+      - name: Link & Deploy
+        shell: bash
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
+          export PATH="$HOME/.railway/bin:$PATH"
           railway link \
             --project "${{ secrets.RAILWAY_PROJECT_ID }}" \
             --service choice-backend \
             --environment production
-
-      - name: Deploy to Railway
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service choice-backend --detach
+          railway up --service choice-backend --detach
