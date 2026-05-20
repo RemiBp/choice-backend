@@ -10,5 +10,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 COPY --from=builder /app/dist ./dist
+COPY startup.sh ./startup.sh
+RUN chmod +x startup.sh
 EXPOSE 6543
-CMD ["node", "dist/index.js"]
+CMD ["sh", "startup.sh"]
