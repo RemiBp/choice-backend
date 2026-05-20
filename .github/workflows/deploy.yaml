@@ -1,4 +1,4 @@
-name: Deploy to Elastic Beanstalk
+name: Deploy to Railway
 
 on:
   push:
@@ -8,43 +8,22 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "20"
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
 
-      # Install dependencies
-      - name: Install Dependencies
-        run: npm ci
-
-      # Build the project
-      - name: Build the project
-        run: npm run build
-
-      # Zip the build output and package.json
-      - name: Zip the build output
-        run: zip -r build.zip dist package.json package-lock.json
-        
-      - name: Configure AWS credentials
+      - name: Link Railway project
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          aws configure set aws_access_key_id "${{ secrets.AWS_ACCESS_KEY_ID }}"
-          aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-          aws configure set region "${{ secrets.AWS_REGION }}"
-      
-      - name: Upload to S3
-        run: aws s3 cp build.zip "s3://${{ secrets.S3_BUCKET_NAME }}/build.zip"
-      
-      - name: Deploy to AWS Elastic Beanstalk
-        run: |
-          aws elasticbeanstalk create-application-version \
-            --application-name "${{ secrets.EB_APPLICATION_NAME }}" \
-            --source-bundle S3Bucket="${{ secrets.S3_BUCKET_NAME }}",S3Key="build.zip" \
-            --version-label "v${{ github.run_number }}"
-          aws elasticbeanstalk update-environment \
-            --environment-name "${{ secrets.EB_ENVIRONMENT_NAME }}" \
-            --version-label "v${{ github.run_number }}"
+          railway link \
+            --project "${{ secrets.RAILWAY_PROJECT_ID }}" \
+            --service choice-backend \
+            --environment production
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service choice-backend --detach
